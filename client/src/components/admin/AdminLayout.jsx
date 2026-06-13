@@ -166,7 +166,10 @@ export default function AdminLayout() {
   );
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith("/admin/settings") ||
-    location.pathname.startsWith("/admin/staff")
+    location.pathname.startsWith("/admin/staff") ||
+    location.pathname.startsWith("/admin/payment-gateways") ||
+    location.pathname.startsWith("/admin/sms") ||
+    location.pathname.startsWith("/admin/integrations")
   );
 
   const isMaster = user?.role === "master_admin";
@@ -244,6 +247,9 @@ export default function AdminLayout() {
             {settingsOpen && (
               <div className="ml-3 mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
                 <NavLink to="/admin/settings" end className={navCls}>Site Settings</NavLink>
+                <NavLink to="/admin/payment-gateways" className={navCls}>💳 Payments</NavLink>
+                <NavLink to="/admin/sms" className={navCls}>📱 SMS</NavLink>
+                <NavLink to="/admin/integrations" className={navCls}>🔗 Integrations</NavLink>
                 {isMaster && (
                   <NavLink to="/admin/staff" className={navCls}>Users &amp; Permissions</NavLink>
                 )}

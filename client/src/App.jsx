@@ -31,6 +31,9 @@ import RequestBlocPage from "./pages/RequestBlocPage.jsx";
 import ContentEditor from "./pages/admin/ContentEditor.jsx";
 import SiteSettings from "./pages/admin/SiteSettings.jsx";
 import ManageSEO from "./pages/admin/ManageSEO.jsx";
+import ManagePaymentGateways from "./pages/admin/ManagePaymentGateways.jsx";
+import ManageSms from "./pages/admin/ManageSms.jsx";
+import ManageIntegrations from "./pages/admin/ManageIntegrations.jsx";
 
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
@@ -78,6 +81,9 @@ export default function App() {
         <Route path="content" element={<ContentEditor />} />
         <Route path="settings" element={<SiteSettings />} />
         <Route path="seo" element={<ManageSEO />} />
+        <Route path="payment-gateways" element={<ManagePaymentGateways />} />
+        <Route path="sms" element={<ManageSms />} />
+        <Route path="integrations" element={<ManageIntegrations />} />
       </Route>
     </Routes>
   );

@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import { ensureSeeded } from "./seedData.js";
+import { seedGateways } from "./controllers/paymentGatewayController.js";
 import routes from "./routes/index.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import { getRobots } from "./controllers/seoController.js";
@@ -58,6 +59,7 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
   .then(() => ensureSeeded())
+  .then(() => seedGateways())
   .then(() => {
     app.listen(PORT, () => console.log(`✓ D BLOC API running on http://localhost:${PORT}`));
   });

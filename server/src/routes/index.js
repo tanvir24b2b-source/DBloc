@@ -8,6 +8,9 @@ import * as admin from "../controllers/adminController.js";
 import * as subscriber from "../controllers/subscriberController.js";
 import * as blocRequest from "../controllers/blocRequestController.js";
 import * as seo from "../controllers/seoController.js";
+import * as paymentGw from "../controllers/paymentGatewayController.js";
+import * as smsCtrl from "../controllers/smsController.js";
+import * as integrationCtrl from "../controllers/integrationController.js";
 import { protect, isAdmin, isMasterAdmin } from "../middleware/auth.js";
 import Order from "../models/Order.js";
 import Counter from "../models/Counter.js";
@@ -67,6 +70,23 @@ router.get("/seo", wrap(seo.getSettings));
 router.get("/seo/admin", adminGuard, wrap(seo.getSettingsAdmin));
 router.put("/seo", adminGuard, wrap(seo.updateSettings));
 router.post("/seo/mcp-token", adminGuard, wrap(seo.generateMcpToken));
+
+// --- Payment Gateways ---
+router.get("/payment-gateways", wrap(paymentGw.listPublic));
+router.get("/admin/payment-gateways", adminGuard, wrap(paymentGw.listAdmin));
+router.put("/admin/payment-gateways/:id", adminGuard, wrap(paymentGw.updateGateway));
+router.post("/admin/payment-gateways", adminGuard, wrap(paymentGw.addGateway));
+
+// --- SMS ---
+router.get("/admin/sms", adminGuard, wrap(smsCtrl.getSettings));
+router.put("/admin/sms", adminGuard, wrap(smsCtrl.updateSettings));
+router.post("/admin/sms/test", adminGuard, wrap(smsCtrl.testSms));
+
+// --- Integrations ---
+router.get("/admin/integrations", adminGuard, wrap(integrationCtrl.list));
+router.post("/admin/integrations", adminGuard, wrap(integrationCtrl.create));
+router.put("/admin/integrations/:id", adminGuard, wrap(integrationCtrl.update));
+router.delete("/admin/integrations/:id", adminGuard, wrap(integrationCtrl.remove));
 
 // --- Admin ---
 router.get("/admin/dashboard", adminGuard, wrap(admin.dashboard));

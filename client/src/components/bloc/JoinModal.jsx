@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useText } from "../../store/ContentContext.jsx";
 import { useAuthStore } from "../../store/useAuthStore.js";
@@ -10,6 +10,15 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
   const ctaText = useText("join.ctaText", "CREATE ACCOUNT AND JOIN BLOC");
   const currency = useText("site.currency", "৳");
   const { user, setAuth } = useAuthStore();
+
+  const [gateways, setGateways] = useState([]);
+  useEffect(() => {
+    api.get("/payment-gateways").then(({ data }) => {
+      setGateways(data.gateways);
+      const def = data.gateways.find((g) => g.isDefault) || data.gateways[0];
+      if (def) setForm((f) => ({ ...f, paymentMethod: def.type }));
+    }).catch(() => {});
+  }, []);
 
   const [form, setForm] = useState({
     customerName: user?.name || "",
@@ -24,12 +33,24 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  function handleMobile(e) {
+    // Allow only digits, max 11
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setForm((f) => ({ ...f, mobile: digits }));
+  }
+
   async function submit(e) {
     e.preventDefault();
+    if (form.mobile.length !== 11) {
+      setError("Mobile number must be exactly 11 digits (e.g. 01700000000)");
+      return;
+    }
     setLoading(true);
     setError("");
+    // Send full number with country code to backend
+    const payload = { ...form, mobile: "+880" + form.mobile.slice(1) };
     try {
-      const { data } = await api.post("/orders", { blocId: bloc._id, quantity, ...form });
+      const { data } = await api.post("/orders", { blocId: bloc._id, quantity, ...payload });
       // If an account was created (password provided), log the customer in with their own name.
       if (data.accessToken) setAuth({ user: data.user, accessToken: data.accessToken });
       onSuccess(data.order);
@@ -51,7 +72,6 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
         <form onSubmit={submit} className="space-y-3">
           {[
             ["customerName", "Full Name", "text", "Your name"],
-            ["mobile", "Mobile Number", "tel", "e.g. 01700000000"],
             ["email", "Email", "email", "Your email"],
             ["address", "Address", "text", "Full delivery address..."],
           ].map(([k, label, type, ph]) => (
@@ -63,6 +83,32 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
               />
             </div>
           ))}
+
+          {/* Bangladesh mobile field */}
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-muted">Mobile Number</label>
+            <div className="flex rounded-lg border border-line overflow-hidden focus-within:border-brand">
+              <span className="flex items-center gap-1.5 bg-gray-100 px-3 text-sm font-semibold text-gray-600 border-r border-line shrink-0 select-none">
+                🇧🇩 +880
+              </span>
+              <input
+                type="tel"
+                required
+                value={form.mobile}
+                onChange={handleMobile}
+                placeholder="01700000000"
+                maxLength={11}
+                inputMode="numeric"
+                className="flex-1 px-3 py-2 text-sm outline-none bg-white"
+              />
+              <span className={`flex items-center pr-3 text-xs font-semibold shrink-0 ${form.mobile.length === 11 ? "text-green-500" : "text-gray-400"}`}>
+                {form.mobile.length}/11
+              </span>
+            </div>
+            {form.mobile.length > 0 && form.mobile.length < 11 && (
+              <p className="mt-1 text-[11px] text-red-500">{11 - form.mobile.length} more digit{11 - form.mobile.length !== 1 ? "s" : ""} needed</p>
+            )}
+          </div>
 
           {!user && (
             <div>
@@ -76,11 +122,20 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
 
           <div>
             <label className="mb-1 block text-[11px] font-semibold uppercase text-muted">Payment Method</label>
-            <select value={form.paymentMethod} onChange={set("paymentMethod")} className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand">
-              <option value="cod">Cash on Delivery</option>
-              <option value="bkash">bKash</option>
-              <option value="sslcommerz">Card / SSLCommerz</option>
-            </select>
+            <div className="space-y-2">
+              {gateways.map((gw) => (
+                <label key={gw.type} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition ${form.paymentMethod === gw.type ? "border-brand bg-orange-50" : "border-line bg-white hover:border-brand/40"}`}>
+                  <input type="radio" name="paymentMethod" value={gw.type} checked={form.paymentMethod === gw.type} onChange={set("paymentMethod")} className="accent-brand" />
+                  <span className="text-sm font-medium text-ink">{gw.displayName}</span>
+                  {gw.isDefault && <span className="ml-auto text-[10px] font-bold text-brand uppercase">Default</span>}
+                </label>
+              ))}
+              {gateways.length === 0 && (
+                <select value={form.paymentMethod} onChange={set("paymentMethod")} className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand">
+                  <option value="cod">Cash on Delivery</option>
+                </select>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-cream px-3 py-2 text-sm">
