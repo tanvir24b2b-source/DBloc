@@ -7,3 +7,5 @@ dist/
 uploads/
 server/public/images/
 Recource/
+.claude/
+CLAUDE.md
