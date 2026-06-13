@@ -97,7 +97,9 @@ export async function placeOrder(req, res) {
 }
 
 export async function trackOrder(req, res) {
-  const { orderId, mobile } = req.query;
+  // Cast to String — prevents NoSQL injection via object query params (e.g. ?mobile[$ne]=)
+  const orderId = req.query.orderId != null ? String(req.query.orderId) : null;
+  const mobile = req.query.mobile != null ? String(req.query.mobile) : null;
   if (!orderId && !mobile) return res.status(400).json({ message: "Provide orderId or mobile" });
 
   // Order ID lookup: return full details (user knows their own ID)

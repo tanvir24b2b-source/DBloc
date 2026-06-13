@@ -11,11 +11,16 @@ const hoursFromNow = (h) => new Date(Date.now() + h * 60 * 60 * 1000);
 
 export async function seedDatabase({ force = false, log = console.log } = {}) {
   // --- Staff accounts ---
+  // Passwords come from .env so real credentials are never committed to the repo.
+  const masterPass = process.env.SEED_MASTER_PASSWORD || "master123";
+  const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin123";
   await User.deleteMany({ role: { $in: ["master_admin", "admin", "subadmin", "moderator"] } });
-  await User.create({ name: "Master Admin", email: "master@dblock.bd", password: "master123", role: "master_admin" });
-  await User.create({ name: "D Bloc Admin", email: "admin@dblock.bd", password: "admin123", role: "admin" });
-  log("✓ Master admin: master@dblock.bd / master123");
-  log("✓ Admin: admin@dblock.bd / admin123");
+  await User.create({ name: "Master Admin", email: "master@dblock.bd", password: masterPass, role: "master_admin" });
+  await User.create({ name: "D Bloc Admin", email: "admin@dblock.bd", password: adminPass, role: "admin" });
+  log("✓ Master admin seeded: master@dblock.bd");
+  log("✓ Admin seeded: admin@dblock.bd");
+  if (!process.env.SEED_MASTER_PASSWORD || !process.env.SEED_ADMIN_PASSWORD)
+    log("⚠ Using DEFAULT seed passwords. Set SEED_MASTER_PASSWORD and SEED_ADMIN_PASSWORD in .env before production.");
 
   // --- Customer accounts ---
   // NOTE: use .save() (not insertMany) so the password-hashing pre-save hook runs.

@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "moderator", "subadmin", "admin", "master_admin"], default: "user" },
     permissions: [{ type: String }], // staff: which admin areas they can manage
     banned: { type: Boolean, default: false },
+    tokenVersion: { type: Number, default: 0 }, // bumped on logout / password change to revoke old refresh tokens
   },
   { timestamps: true }
 );

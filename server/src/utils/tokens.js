@@ -7,7 +7,7 @@ export function signAccessToken(user) {
 }
 
 export function signRefreshToken(user) {
-  return jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ id: user._id, tv: user.tokenVersion || 0 }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: "30d",
   });
 }

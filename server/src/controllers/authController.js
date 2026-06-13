@@ -24,7 +24,9 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   const { email, password } = req.body;
-  const user = await User.findOne({ email: email?.toLowerCase() }).select("+password");
+  if (typeof email !== "string" || typeof password !== "string")
+    return res.status(400).json({ message: "Invalid email or password" });
+  const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
   if (!user || !(await user.comparePassword(password)))
     return res.status(401).json({ message: "Invalid email or password" });
   if (user.banned) return res.status(403).json({ message: "Account banned" });
@@ -39,6 +41,14 @@ export async function me(req, res) {
 }
 
 export async function logout(req, res) {
+  // Bump tokenVersion so the just-issued refresh token can no longer be used.
+  const token = req.cookies?.refreshToken;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+      await User.findByIdAndUpdate(decoded.id, { $inc: { tokenVersion: 1 } });
+    } catch { /* expired/invalid token — nothing to revoke */ }
+  }
   res.clearCookie("refreshToken");
   res.json({ message: "Logged out" });
 }
@@ -50,6 +60,10 @@ export async function refresh(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
     if (!user || user.banned) return res.status(401).json({ message: "Invalid session" });
+    if ((decoded.tv || 0) !== (user.tokenVersion || 0)) {
+      res.clearCookie("refreshToken");
+      return res.status(401).json({ message: "Session revoked, please log in again" });
+    }
     const accessToken = signAccessToken(user);
     res.cookie("refreshToken", signRefreshToken(user), cookieOptions);
     res.json({ accessToken, user: publicUser(user) });
@@ -62,7 +76,7 @@ export async function refresh(req, res) {
 // verified by matching email + registered mobile number on a customer account.
 export async function forgotPassword(req, res) {
   const { email, mobile, newPassword } = req.body;
-  if (!email || !mobile || !newPassword)
+  if (typeof email !== "string" || typeof mobile !== "string" || typeof newPassword !== "string")
     return res.status(400).json({ message: "Email, mobile number, and new password are required" });
   if (newPassword.length < 8)
     return res.status(400).json({ message: "Password must be at least 8 characters" });
@@ -74,6 +88,7 @@ export async function forgotPassword(req, res) {
     return res.status(404).json({ message: "No account matches that email and mobile number" });
 
   user.password = newPassword;
+  user.tokenVersion = (user.tokenVersion || 0) + 1; // revoke existing sessions
   await user.save();
   res.json({ message: "Password reset successful. You can now log in." });
 }
@@ -93,6 +108,7 @@ export async function updateProfile(req, res) {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: "Current password is incorrect" });
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // revoke existing sessions
   }
 
   await user.save();
