@@ -32,10 +32,8 @@ npm run dev
 Then open **http://localhost:5173**.
 
 ### Admin login
-- URL: http://localhost:5173/login
-- Email: `admin@dblock.bd`
-- Password: `admin123`
 
+Go to **http://localhost:5173/login** and use the admin credentials from your `.env` seed data.
 After login you get an **ADMIN** button in the navbar → `/admin`.
 
 ---

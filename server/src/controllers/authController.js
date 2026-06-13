@@ -10,6 +10,8 @@ export async function register(req, res) {
   const { name, email, password, mobile, address } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ message: "Name, email, and password are required" });
+  if (password.length < 8)
+    return res.status(400).json({ message: "Password must be at least 8 characters" });
 
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) return res.status(409).json({ message: "Email already registered" });
@@ -62,8 +64,8 @@ export async function forgotPassword(req, res) {
   const { email, mobile, newPassword } = req.body;
   if (!email || !mobile || !newPassword)
     return res.status(400).json({ message: "Email, mobile number, and new password are required" });
-  if (newPassword.length < 6)
-    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  if (newPassword.length < 8)
+    return res.status(400).json({ message: "Password must be at least 8 characters" });
 
   // Only customers (role "user") can self-reset. Staff/admin accounts are excluded.
   // Use a consistent error message to prevent email/mobile enumeration.
