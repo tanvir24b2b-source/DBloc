@@ -1,9 +1,10 @@
 import jwt from "jsonwebtoken";
+import xss from "xss";
 import User from "../models/User.js";
 import { signAccessToken, signRefreshToken, cookieOptions } from "../utils/tokens.js";
 
 function publicUser(u) {
-  return { _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [] };
+  return { _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [], lastLoginAt: u.lastLoginAt, lastLoginIP: u.lastLoginIP };
 }
 
 export async function register(req, res) {
@@ -16,7 +17,7 @@ export async function register(req, res) {
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) return res.status(409).json({ message: "Email already registered" });
 
-  const user = await User.create({ name, email, password, mobile, address });
+  const user = await User.create({ name: xss(name), email, password, mobile, address: address ? xss(address) : address });
   const accessToken = signAccessToken(user);
   res.cookie("refreshToken", signRefreshToken(user), cookieOptions);
   res.status(201).json({ user: publicUser(user), accessToken });
@@ -30,6 +31,10 @@ export async function login(req, res) {
   if (!user || !(await user.comparePassword(password)))
     return res.status(401).json({ message: "Invalid email or password" });
   if (user.banned) return res.status(403).json({ message: "Account banned" });
+
+  user.lastLoginAt = new Date();
+  user.lastLoginIP = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  await user.save({ validateModifiedOnly: true });
 
   const accessToken = signAccessToken(user);
   res.cookie("refreshToken", signRefreshToken(user), cookieOptions);
@@ -98,10 +103,10 @@ export async function updateProfile(req, res) {
   const user = await User.findById(req.user._id).select("+password");
   if (!user) return res.status(404).json({ message: "User not found" });
 
-  if (name) user.name = name.trim();
+  if (name) user.name = xss(name.trim());
   if (email) user.email = email.toLowerCase().trim();
   if (mobile !== undefined) user.mobile = mobile;
-  if (address !== undefined) user.address = address;
+  if (address !== undefined) user.address = xss(address);
 
   if (newPassword) {
     if (!password) return res.status(400).json({ message: "Current password required to set a new one" });

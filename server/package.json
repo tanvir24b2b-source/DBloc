@@ -20,7 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb-memory-server": "^11.2.0",
     "mongoose": "^8.9.5",
-    "nanoid": "^5.1.11"
+    "nanoid": "^5.1.11",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
