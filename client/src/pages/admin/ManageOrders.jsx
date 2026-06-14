@@ -49,6 +49,9 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
   const [msg, setMsg]           = useState("");
   const [shipping, setShipping] = useState(false);
   const [blocking, setBlocking] = useState(false);
+  const [blocSearch, setBlocSearch] = useState(order.bloc?.title || "");
+  const [blocDropOpen, setBlocDropOpen] = useState(false);
+  const [dangerOpen, setDangerOpen] = useState(false);
 
   const isShipped = ["shipped", "delivered", "pending_return", "returned"].includes(order.status);
   const canShip   = ["confirmed", "processing"].includes(order.status);
@@ -206,15 +209,46 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
               </div>
             </div>
 
-            {/* Product change */}
+            {/* Product change — searchable */}
             {!isShipped && (
-              <div>
+              <div className="relative">
                 <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Change Product</label>
-                <select value={form.bloc} onChange={set("bloc")} className={INP}>
-                  {allBlocs.map((b) => (
-                    <option key={b._id} value={b._id}>{b.title} {b.status !== "active" ? `(${b.status})` : ""}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={blocSearch}
+                  onChange={(e) => { setBlocSearch(e.target.value); setBlocDropOpen(true); }}
+                  onFocus={() => setBlocDropOpen(true)}
+                  placeholder="Search product name..."
+                  className={INP}
+                />
+                {blocDropOpen && blocSearch.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-52 overflow-y-auto">
+                    {allBlocs
+                      .filter((b) => b.title.toLowerCase().includes(blocSearch.toLowerCase()))
+                      .slice(0, 8)
+                      .map((b) => (
+                        <button
+                          key={b._id}
+                          type="button"
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                          onClick={() => {
+                            setForm((f) => ({ ...f, bloc: b._id }));
+                            setBlocSearch(b.title);
+                            setBlocDropOpen(false);
+                          }}
+                        >
+                          {b.image && <img src={b.image} alt={b.title} className="h-9 w-9 rounded object-cover flex-shrink-0 border border-gray-100" />}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{b.title}</p>
+                            <p className="text-xs text-gray-400">৳{formatPrice(b.blocPrice)} {b.status !== "active" ? `· ${b.status}` : ""}</p>
+                          </div>
+                        </button>
+                      ))}
+                    {allBlocs.filter((b) => b.title.toLowerCase().includes(blocSearch.toLowerCase())).length === 0 && (
+                      <p className="px-3 py-2 text-xs text-gray-400">No products found</p>
+                    )}
+                  </div>
+                )}
                 {blocChanged && (
                   <p className="mt-1 text-xs text-orange-500">Product will be changed. This will be logged in change history.</p>
                 )}
@@ -289,14 +323,25 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
             </div>
           )}
 
-          {/* Block customer */}
+          {/* Danger zone — collapsible */}
           {order.user && (
             <div className="border-t border-gray-100 pt-4">
-              <button onClick={blockCustomer} disabled={blocking}
-                className="w-full rounded-lg border border-red-200 py-2 text-sm font-semibold text-red-500 hover:bg-red-50 disabled:opacity-50">
-                {blocking ? "Blocking..." : "🚫 Block This Customer"}
+              <button
+                type="button"
+                onClick={() => setDangerOpen((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-red-400"
+              >
+                <span>{dangerOpen ? "▾" : "▸"}</span> Danger Zone
               </button>
-              <p className="mt-1 text-center text-[10px] text-gray-400">Blocks phone number from placing future orders</p>
+              {dangerOpen && (
+                <div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
+                  <p className="text-xs text-red-500 mb-2">This will block the customer from placing future orders.</p>
+                  <button onClick={blockCustomer} disabled={blocking}
+                    className="rounded-lg border border-red-300 px-4 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50">
+                    {blocking ? "Blocking..." : "🚫 Block This Customer"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
