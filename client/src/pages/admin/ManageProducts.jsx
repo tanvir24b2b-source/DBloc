@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api.js";
 import { formatPrice } from "../../lib/format.js";
 
+const CSV_HEADERS = ["title","description","shortDescription","fullDescription","originalPrice","blocPrice","maxSpots","endTime","category","sku","featured","image","gallery1","gallery2","gallery3","gallery4","gallery5"];
+const CSV_EXAMPLE = ["Sample Product","Short one-line description","Tagline / subheading","Full detailed description here","5000","4000","100","2026-12-31","Electronics","SKU-001","false","https://example.com/main.jpg","https://example.com/gallery1.jpg","","","",""];
+
 export default function ManageProducts() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileRef = useRef();
 
   const { data: blocs = [], isLoading } = useQuery({
     queryKey: ["admin-products"],
@@ -22,6 +28,33 @@ export default function ManageProducts() {
     await api.delete(`/blocs/${id}`);
     qc.invalidateQueries({ queryKey: ["admin-products"] });
     qc.invalidateQueries({ queryKey: ["admin-blocs"] });
+  }
+
+  function downloadTemplate() {
+    const csv = [CSV_HEADERS.join(","), CSV_EXAMPLE.map((v) => `"${v}"`).join(",")].join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv," + encodeURIComponent(csv);
+    a.download = "dbloc-import-template.csv";
+    a.click();
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImportResult(null);
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const { data } = await api.post("/blocs/import-csv", { csv: text });
+      setImportResult(data);
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["admin-blocs"] });
+    } catch (err) {
+      setImportResult({ error: err.response?.data?.message || "Import failed" });
+    } finally {
+      setImporting(false);
+      fileRef.current.value = "";
+    }
   }
 
   function exportCSV() {
@@ -42,10 +75,17 @@ export default function ManageProducts() {
           <h1 className="text-xl font-extrabold tracking-tight text-gray-900">Products</h1>
           <p className="mt-0.5 text-sm text-gray-500">{blocs.length} products in catalog</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={downloadTemplate} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50">
+            ↓ Template
+          </button>
           <button onClick={exportCSV} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50">
             ↓ Export CSV
           </button>
+          <label className={`cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-50 ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+            {importing ? "Importing..." : "↑ Import CSV"}
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+          </label>
           <Link
             to="/admin/products/new"
             className="rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-brand/30 hover:bg-brand-hover"
@@ -54,6 +94,27 @@ export default function ManageProducts() {
           </Link>
         </div>
       </div>
+
+      {/* Import result */}
+      {importResult && (
+        <div className={`rounded-xl border px-5 py-4 text-sm ${importResult.error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
+          {importResult.error ? (
+            <p className="font-semibold">{importResult.error}</p>
+          ) : (
+            <>
+              <p className="font-semibold">{importResult.created} created, {importResult.failed} failed</p>
+              {importResult.details?.failed?.length > 0 && (
+                <ul className="mt-2 space-y-0.5 text-xs text-red-700">
+                  {importResult.details.failed.map((f, i) => (
+                    <li key={i}>Row {f.row}{f.title ? ` (${f.title})` : ""}: {f.reason}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          <button onClick={() => setImportResult(null)} className="mt-2 text-xs underline opacity-70 hover:opacity-100">Dismiss</button>
+        </div>
+      )}
 
       {/* Search + filter bar */}
       <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2">

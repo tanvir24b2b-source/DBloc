@@ -1,3 +1,5 @@
+import { parse } from "csv-parse/sync";
+import Category from "../models/Category.js";
 import Bloc from "../models/Bloc.js";
 import Order from "../models/Order.js";
 
@@ -82,4 +84,69 @@ export async function deleteBloc(req, res) {
   const bloc = await Bloc.findByIdAndDelete(req.params.id);
   if (!bloc) return res.status(404).json({ message: "Bloc not found" });
   res.json({ message: "Bloc deleted" });
+}
+
+export async function importBlocs(req, res) {
+  if (!req.body || !req.body.csv) return res.status(400).json({ message: "No CSV data provided" });
+
+  let rows;
+  try {
+    rows = parse(req.body.csv, { columns: true, skip_empty_lines: true, trim: true });
+  } catch {
+    return res.status(400).json({ message: "Invalid CSV format" });
+  }
+
+  // Pre-load all categories for name → _id lookup
+  const categories = await Category.find().lean();
+  const catMap = {};
+  categories.forEach((c) => { catMap[c.name.toLowerCase()] = c._id; });
+
+  const created = [];
+  const failed  = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNum = i + 2; // 1-indexed + header row
+
+    // Required fields
+    if (!row.title?.trim())         { failed.push({ row: rowNum, reason: "title is required" }); continue; }
+    if (!row.originalPrice)         { failed.push({ row: rowNum, title: row.title, reason: "originalPrice is required" }); continue; }
+    if (!row.blocPrice)             { failed.push({ row: rowNum, title: row.title, reason: "blocPrice is required" }); continue; }
+    if (!row.maxSpots)              { failed.push({ row: rowNum, title: row.title, reason: "maxSpots is required" }); continue; }
+    if (!row.endTime)               { failed.push({ row: rowNum, title: row.title, reason: "endTime is required" }); continue; }
+    if (!row.image?.trim())         { failed.push({ row: rowNum, title: row.title, reason: "image (main image URL) is required" }); continue; }
+
+    const endDate = new Date(row.endTime);
+    if (isNaN(endDate.getTime())) { failed.push({ row: rowNum, title: row.title, reason: "endTime is not a valid date (use YYYY-MM-DD)" }); continue; }
+
+    // Gallery — up to 5
+    const gallery = [row.gallery1, row.gallery2, row.gallery3, row.gallery4, row.gallery5]
+      .filter((u) => u?.trim());
+
+    // Category lookup by name
+    const catId = row.category ? catMap[row.category.toLowerCase().trim()] : undefined;
+
+    try {
+      const bloc = await Bloc.create({
+        title:            row.title.trim(),
+        description:      row.description?.trim()      || "",
+        shortDescription: row.shortDescription?.trim() || "",
+        fullDescription:  row.fullDescription?.trim()  || "",
+        originalPrice:    Number(row.originalPrice),
+        blocPrice:        Number(row.blocPrice),
+        maxSpots:         Number(row.maxSpots),
+        endTime:          endDate,
+        image:            row.image.trim(),
+        gallery,
+        sku:              row.sku?.trim() || "",
+        featured:         row.featured?.toLowerCase() === "true",
+        ...(catId ? { category: catId } : {}),
+      });
+      created.push({ row: rowNum, title: bloc.title, id: bloc._id });
+    } catch (err) {
+      failed.push({ row: rowNum, title: row.title, reason: err.message });
+    }
+  }
+
+  res.json({ created: created.length, failed: failed.length, details: { created, failed } });
 }

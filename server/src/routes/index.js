@@ -34,6 +34,7 @@ router.post("/auth/forgot-password", wrap(auth.forgotPassword));
 router.get("/blocs", wrap(bloc.listBlocs));
 router.get("/blocs/:id", wrap(bloc.getBloc));
 router.post("/blocs", adminGuard, wrap(bloc.createBloc));
+router.post("/blocs/import-csv", adminGuard, wrap(bloc.importBlocs));
 router.put("/blocs/:id", adminGuard, wrap(bloc.updateBloc));
 router.delete("/blocs/:id", adminGuard, wrap(bloc.deleteBloc));
 
