@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import EditableText from "../common/EditableText.jsx";
 import BlocCarousel from "../common/BlocCarousel.jsx";
 import { getCountdown } from "../../lib/format.js";
+import { useReveal } from "../../hooks/useReveal.js";
 
 // Blocs that are active AND close within the next 24 hours.
 export function endingSoon(blocs) {
@@ -13,11 +14,12 @@ export function endingSoon(blocs) {
 }
 
 export default function EndingSoon({ blocs }) {
+  const ref = useReveal();
   const items = endingSoon(blocs);
   if (items.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-12">
+    <section ref={ref} className="reveal mx-auto max-w-7xl px-6 py-12">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="animate-soft-pulse text-brand">⏱</span>

@@ -1,6 +1,74 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../../lib/api.js";
 
+function HeroBgImageUpload({ items, onSaved }) {
+  const fileRef = useRef();
+  const item = items.find((i) => i.key === "hero.bgImage");
+  const [preview, setPreview] = useState(item?.value || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setPreview(items.find((i) => i.key === "hero.bgImage")?.value || "");
+  }, [items]);
+
+  function pick() { fileRef.current?.click(); }
+
+  async function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const val = ev.target.result;
+      setPreview(val);
+      setSaving(true);
+      await api.put("/content/hero.bgImage", { value: val });
+      setSaving(false);
+      onSaved("hero.bgImage", val);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function remove() {
+    setPreview("");
+    setSaving(true);
+    await api.put("/content/hero.bgImage", { value: "" });
+    setSaving(false);
+    onSaved("hero.bgImage", "");
+  }
+
+  return (
+    <div className="mb-3 rounded-xl border border-line bg-white p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-ink">Hero Background Image</p>
+          <p className="text-[11px] text-muted">Recommended: 1440 × 700 px · Replaces the dark background color</p>
+        </div>
+        {saving && <span className="text-[11px] text-muted">Saving…</span>}
+      </div>
+      {preview ? (
+        <div className="relative overflow-hidden rounded-lg" style={{ height: 100 }}>
+          <img src={preview} alt="Hero bg" className="h-full w-full object-cover" />
+          <button
+            onClick={remove}
+            className="absolute right-2 top-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-bold text-white hover:bg-danger"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <div
+          onClick={pick}
+          className="flex h-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-line bg-cream text-sm text-muted transition hover:border-brand hover:text-brand"
+        >
+          + Upload banner image
+        </div>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
 // Pages shown in iframe preview (click-to-edit)
 const PREVIEW_PAGES = [
   { id: "home",       label: "🏠 Homepage",    path: "/" },
@@ -135,6 +203,13 @@ export default function ContentEditor() {
     setTimeout(() => setToast(""), 2500);
   }
 
+  function onHeroImageSaved(key, value) {
+    setItems((arr) => arr.map((i) => (i.key === key ? { ...i, value } : i)));
+    iframeRef.current?.contentWindow?.postMessage({ type: "cms-updated", key, value }, "*");
+    setToast("Saved — live site updated");
+    setTimeout(() => setToast(""), 2500);
+  }
+
   function selectPreview(p) {
     setActivePage(p);
     setActiveStatic(null);
@@ -185,6 +260,9 @@ export default function ContentEditor() {
           <StaticPageEditor key={activeStatic.id} page={activeStatic} />
         ) : (
           <div className="flex-1">
+            {activePage?.id === "home" && (
+              <HeroBgImageUpload items={items} onSaved={onHeroImageSaved} />
+            )}
             <div className="overflow-hidden rounded-xl border-2 border-brand bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-line bg-cream px-4 py-2 text-xs text-muted">
                 <span className="h-2.5 w-2.5 rounded-full bg-danger/60" />

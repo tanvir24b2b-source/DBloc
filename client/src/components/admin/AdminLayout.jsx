@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore.js";
 import api from "../../lib/api.js";
@@ -154,6 +154,112 @@ function ProfileModal({ user, onClose, onUpdate }) {
   );
 }
 
+function GlobalSearch({ navigate }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (q.trim().length < 2) { setResults(null); setOpen(false); return; }
+      try {
+        const { data } = await api.get(`/admin/search?q=${encodeURIComponent(q)}`);
+        setResults(data);
+        setOpen(true);
+      } catch { setResults(null); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const go = (path) => { setQ(""); setOpen(false); navigate(path); };
+  const total = results ? results.orders.length + results.customers.length + results.subscribers.length + results.blocs.length : 0;
+
+  return (
+    <div ref={ref} className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">⌕</span>
+      <input
+        value={q} onChange={(e) => setQ(e.target.value)}
+        placeholder="Search orders, customers, products..."
+        className="w-72 rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm outline-none focus:border-brand"
+      />
+      {open && results && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-96 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+          {total === 0 ? (
+            <p className="px-4 py-3 text-sm text-gray-400">No results for "{q}"</p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+              {results.orders.length > 0 && (
+                <div>
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase text-gray-400 bg-gray-50">Orders</p>
+                  {results.orders.map((o) => (
+                    <button key={o._id} onClick={() => go("/admin/orders")}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-orange-50 transition">
+                      <span className="text-base">🛒</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800">{o.orderId} — {o.customerName}</p>
+                        <p className="text-xs text-gray-400">{o.mobile} · ৳{o.amount} · {o.status}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {results.customers.length > 0 && (
+                <div>
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase text-gray-400 bg-gray-50">Customers</p>
+                  {results.customers.map((c) => (
+                    <button key={c._id} onClick={() => go("/admin/users")}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-orange-50 transition">
+                      <span className="text-base">👤</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800">{c.name}</p>
+                        <p className="text-xs text-gray-400">{c.email} · {c.mobile}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {results.subscribers.length > 0 && (
+                <div>
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase text-gray-400 bg-gray-50">Subscribers</p>
+                  {results.subscribers.map((s) => (
+                    <button key={s._id} onClick={() => go("/admin/subscribers")}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-orange-50 transition">
+                      <span className="text-base">✉️</span>
+                      <p className="text-sm text-gray-800">{s.email}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {results.blocs.length > 0 && (
+                <div>
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase text-gray-400 bg-gray-50">Products / Blocs</p>
+                  {results.blocs.map((b) => (
+                    <button key={b._id} onClick={() => go("/admin/blocs")}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-orange-50 transition">
+                      <span className="text-base">📦</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800">{b.title}</p>
+                        <p className="text-xs text-gray-400">৳{b.blocPrice} · {b.status}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminLayout() {
   const { user, logout, updateUser } = useAuthStore();
   const navigate = useNavigate();
@@ -231,7 +337,7 @@ export default function AdminLayout() {
             <span className="text-base">✏️</span> Content
           </NavLink>
           <NavLink to="/admin/seo" className={navCls}>
-            <span className="text-base">🔍</span> SEO
+            <span className="text-base">📊</span> Marketing
           </NavLink>
 
           {/* Settings group */}
@@ -286,10 +392,7 @@ export default function AdminLayout() {
         {/* Top bar */}
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">⌕</span>
-              <input placeholder="Search everything..." className="w-64 rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm outline-none focus:border-brand" />
-            </div>
+            <GlobalSearch navigate={navigate} />
           </div>
           <div className="flex items-center gap-2">
             <div className="text-right">

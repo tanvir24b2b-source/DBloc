@@ -12,6 +12,10 @@ const CREDENTIAL_FIELDS = {
     { key: "username",  label: "Username" },
     { key: "password",  label: "Password" },
   ],
+  bkashmanual: [
+    { key: "number",       label: "Your bKash Number", placeholder: "01XXXXXXXXX", type: "text" },
+    { key: "instructions", label: "Instructions for Customer", placeholder: "Send money to our bKash account and enter your TrxID below.", type: "text" },
+  ],
   nagad: [
     { key: "merchantId",  label: "Merchant ID" },
     { key: "merchantKey", label: "Merchant Key" },
@@ -50,7 +54,7 @@ function GatewayCard({ gw, onSaved }) {
     } finally { setBusy(false); }
   }
 
-  const ICONS = { sslcommerz: "💳", bkash: "🟣", nagad: "🟠", cod: "💵" };
+  const ICONS = { sslcommerz: "💳", bkash: "🟣", bkashmanual: "💜", nagad: "🟠", cod: "💵" };
 
   return (
     <div className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${gw.enabled ? "border-brand/30" : "border-gray-200"}`}>
@@ -98,13 +102,13 @@ function GatewayCard({ gw, onSaved }) {
 
       {open && fields.length > 0 && (
         <form onSubmit={saveCredentials} className="border-t border-gray-100 bg-orange-50 px-5 py-4 space-y-3">
-          <p className="text-xs font-bold text-gray-700">API Credentials</p>
-          {fields.map(({ key, label }) => (
+          <p className="text-xs font-bold text-gray-700">{gw.type === "bkashmanual" ? "Payment Settings" : "API Credentials"}</p>
+          {fields.map(({ key, label, placeholder, type: ftype }) => (
             <div key={key}>
               <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>
               <input
-                type="password"
-                placeholder={`Enter ${label}`}
+                type={ftype || "password"}
+                placeholder={placeholder || `Enter ${label}`}
                 value={creds[key] || ""}
                 onChange={(e) => setCreds((c) => ({ ...c, [key]: e.target.value }))}
                 className={INP}

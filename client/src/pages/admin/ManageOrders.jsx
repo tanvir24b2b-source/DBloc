@@ -81,6 +81,7 @@ export default function ManageOrders() {
               <th className="p-3">Product</th>
               <th className="p-3">Amount</th>
               <th className="p-3">Payment</th>
+              <th className="p-3">TrxID</th>
               <th className="p-3">Status</th>
             </tr>
           </thead>
@@ -99,6 +100,7 @@ export default function ManageOrders() {
                   <td className="p-3">{o.bloc?.title}</td>
                   <td className="p-3">৳{formatPrice(o.amount)}</td>
                   <td className="p-3 uppercase text-xs">{o.paymentMethod}</td>
+                  <td className="p-3 font-mono text-xs text-purple-700">{o.transactionId || <span className="text-muted">—</span>}</td>
                   <td className="p-3">
                     <select
                       value={currentStatus}

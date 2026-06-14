@@ -96,9 +96,8 @@ export default function BlocDetail() {
   // Gallery: use bloc.gallery if present, else build square variants
   const images = useMemo(() => {
     if (!bloc) return [];
-    const list = bloc.gallery?.length ? [bloc.image, ...bloc.gallery].filter(Boolean) : [bloc.image];
-    while (list.length < 4) list.push(`https://picsum.photos/seed/${bloc._id}-${list.length}/600/600`);
-    return list.slice(0, 5);
+    const list = bloc.gallery?.length ? [bloc.image, ...bloc.gallery].filter(Boolean) : [bloc.image].filter(Boolean);
+    return list.slice(0, 6);
   }, [bloc]);
 
   // Real recent orders for this bloc — refreshes every 30s

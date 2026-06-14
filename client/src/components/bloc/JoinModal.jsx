@@ -20,16 +20,22 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
     }).catch(() => {});
   }, []);
 
+  const stripCountryCode = (num = "") => num.replace(/^\+?880/, "0").replace(/\D/g, "").slice(0, 11);
+
   const [form, setForm] = useState({
     customerName: user?.name || "",
-    mobile: user?.mobile || "",
+    mobile: stripCountryCode(user?.mobile || ""),
     email: user?.email || "",
     address: user?.address || "",
     password: "",
     paymentMethod: "cod",
+    transactionId: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const selectedGateway = gateways.find((g) => g.type === form.paymentMethod);
+  const isManual = selectedGateway?.type === "bkashmanual";
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -45,10 +51,13 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
       setError("Mobile number must be exactly 11 digits (e.g. 01700000000)");
       return;
     }
+    if (isManual && !form.transactionId.trim()) {
+      setError("Please enter your bKash Transaction ID");
+      return;
+    }
     setLoading(true);
     setError("");
-    // Send full number with country code to backend
-    const payload = { ...form, mobile: "+880" + form.mobile.slice(1) };
+    const payload = { ...form };
     try {
       const { data } = await api.post("/orders", { blocId: bloc._id, quantity, ...payload });
       // If an account was created (password provided), log the customer in with their own name.
@@ -137,6 +146,42 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
               )}
             </div>
           </div>
+
+          {/* Manual bKash payment instructions */}
+          {isManual && (
+            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 space-y-3">
+              <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">💜 bKash Manual Payment</p>
+              {selectedGateway.manualInstructions && (
+                <p className="text-xs text-purple-800">{selectedGateway.manualInstructions}</p>
+              )}
+              {selectedGateway.manualNumber && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 rounded-lg bg-white border border-purple-200 px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase text-purple-400 mb-0.5">Send To</p>
+                    <p className="text-base font-extrabold text-purple-700 tracking-wider">{selectedGateway.manualNumber}</p>
+                  </div>
+                  <a
+                    href={`bkash://send?number=${selectedGateway.manualNumber}&amount=${bloc.blocPrice}`}
+                    className="shrink-0 rounded-xl bg-purple-600 px-4 py-3 text-center text-xs font-bold text-white hover:bg-purple-700 active:scale-95 transition"
+                  >
+                    Open<br />bKash App
+                  </a>
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase text-purple-600">Transaction ID (TrxID)</label>
+                <input
+                  type="text"
+                  required
+                  value={form.transactionId}
+                  onChange={(e) => setForm((f) => ({ ...f, transactionId: e.target.value.trim() }))}
+                  placeholder="e.g. 8N6A3XYZ12"
+                  className="w-full rounded-lg border border-purple-300 px-3 py-2 text-sm outline-none focus:border-purple-500 bg-white font-mono"
+                />
+                <p className="mt-1 text-[10px] text-purple-500">Find TrxID in bKash app → Send Money → Transaction History</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between rounded-lg bg-cream px-3 py-2 text-sm">
             <span className="text-muted">Total</span>

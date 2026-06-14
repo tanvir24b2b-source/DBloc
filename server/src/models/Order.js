@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { nanoid } from "nanoid";
 
 const orderSchema = new mongoose.Schema(
   {
@@ -15,8 +14,9 @@ const orderSchema = new mongoose.Schema(
     quantity: { type: Number, default: 1 },
     amount: { type: Number, required: true },
 
-    paymentMethod: { type: String, enum: ["sslcommerz", "bkash", "cod"], default: "cod" },
+    paymentMethod: { type: String, default: "cod" },
     paymentStatus: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    transactionId: { type: String, default: "" },
 
     status: {
       type: String,
@@ -31,9 +31,12 @@ orderSchema.index({ bloc: 1 });
 orderSchema.index({ mobile: 1 });
 orderSchema.index({ user: 1 });
 
-orderSchema.pre("save", function (next) {
+orderSchema.pre("save", async function (next) {
   if (!this.orderId) {
-    this.orderId = "DB" + nanoid(8).toUpperCase();
+    const last = await mongoose.model("Order").findOne({}, { orderId: 1 }).sort({ createdAt: -1 });
+    const lastNum = last?.orderId ? parseInt(last.orderId.replace("DB", ""), 10) : 0;
+    const nextNum = (isNaN(lastNum) ? 0 : lastNum) + 1;
+    this.orderId = "DB" + String(nextNum).padStart(4, "0");
   }
   next();
 });

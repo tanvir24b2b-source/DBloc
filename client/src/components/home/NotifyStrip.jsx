@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useText } from "../../store/ContentContext.jsx";
 import EditableText from "../common/EditableText.jsx";
 import api from "../../lib/api.js";
+import { useReveal } from "../../hooks/useReveal.js";
 
 export default function NotifyStrip() {
+  const ref = useReveal();
   const placeholder = useText("notify.placeholder", "Enter your email");
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
@@ -25,7 +27,7 @@ export default function NotifyStrip() {
   }
 
   return (
-    <section className="bg-dark py-10 text-white md:py-14">
+    <section ref={ref} className="reveal bg-dark py-10 text-white md:py-14">
       <div className="mx-auto max-w-3xl px-4 text-center md:px-6">
         <h2 className="text-xl font-bold md:text-2xl">
           <EditableText keyName="notify.headline" fallback="Never miss a Bloc" />

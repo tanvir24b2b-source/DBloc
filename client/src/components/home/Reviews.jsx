@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useContent } from "../../store/ContentContext.jsx";
 import EditableText from "../common/EditableText.jsx";
+import { useReveal } from "../../hooks/useReveal.js";
 
 const REVIEW_KEYS = [
   { t: "reviews.r1Text", n: "reviews.r1Name", tf: "Got my soundbar at almost half price. The Bloc filled up in hours!",  nf: "Rahim, Dhaka" },
@@ -21,6 +22,7 @@ function getPerView(w) {
 }
 
 export default function Reviews() {
+  const revealRef = useReveal();
   const { map } = useContent();
   const [perView, setPerView] = useState(getPerView(typeof window !== "undefined" ? window.innerWidth : 1280));
   const [index, setIndex] = useState(0);
@@ -74,7 +76,7 @@ export default function Reviews() {
   const items = [...REVIEW_KEYS, ...REVIEW_KEYS];
 
   return (
-    <section className="bg-white py-14">
+    <section ref={revealRef} className="reveal bg-white py-14">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="mb-10 text-center text-2xl font-bold text-ink">
           <EditableText keyName="reviews.title" fallback="What Our Customers Say" />

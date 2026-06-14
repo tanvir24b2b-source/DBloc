@@ -149,6 +149,7 @@ function MiniCard({ top, t, spotsLeft, currency }) {
 
 export default function Hero({ featured }) {
   const bg = useText("hero.bgColor", "#111827");
+  const bgImage = useText("hero.bgImage", "");
   const ctaUrl = useText("hero.ctaUrl", "/categories");
   const currency = useText("site.currency", "৳");
   const top = featured?.[0];
@@ -167,8 +168,16 @@ export default function Hero({ featured }) {
 
   const spotsLeft = top ? Math.max(0, top.maxSpots - top.filledSpots) : 0;
 
+  const sectionStyle = bgImage
+    ? { backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { backgroundColor: bg };
+
   return (
-    <section className="relative overflow-hidden text-white" style={{ backgroundColor: bg }}>
+    <section className="relative overflow-hidden text-white" style={sectionStyle}>
+      {/* Dark overlay when bgImage is set */}
+      {bgImage && (
+        <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+      )}
       {/* Glow + grid texture */}
       <div className="pointer-events-none absolute inset-0">
         <div className="animate-hero-glow absolute -left-20 top-0 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
@@ -190,7 +199,7 @@ export default function Hero({ featured }) {
             <p className="mt-1.5 text-xs text-gray-300">
               <EditableText keyName="hero.subtext" fallback="Wholesale price. No middleman." />
             </p>
-            {top && <MobileCountdown t={t} spotsLeft={spotsLeft} />}
+            {top && <div className="mt-auto"><MobileCountdown t={t} spotsLeft={spotsLeft} /></div>}
           </div>
 
           {/* Right: product card */}

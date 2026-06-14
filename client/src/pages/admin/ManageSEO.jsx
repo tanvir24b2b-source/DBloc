@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "../../store/useAuthStore.js";
 import api from "../../lib/api.js";
 
-const TABS = ["Analytics & Tracking", "Robots.txt", "Claude Code Connect"];
+const AI_TOOLS = [
+  { key: "aiClaudeConnected",  label: "Claude Pro",     desc: "Anthropic Claude Pro / Max subscription" },
+  { key: "aiChatGPTConnected", label: "ChatGPT Plus",   desc: "OpenAI ChatGPT Plus / Pro subscription" },
+  { key: "aiGeminiConnected",  label: "Google Gemini",  desc: "Google Gemini Advanced subscription" },
+  { key: "aiOtherConnected",   label: "Other / Free API", desc: "OpenRouter or any free API key" },
+];
 
 export default function ManageSEO() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
+  const isMaster = user?.role === "master_admin";
+
+  const TABS = ["Analytics & Tracking", ...(isMaster ? ["Robots.txt"] : []), "ConnectAI"];
+
   const [tab, setTab] = useState("Analytics & Tracking");
   const [msg, setMsg] = useState("");
   const [mcpToken, setMcpToken] = useState("");
@@ -52,7 +63,7 @@ export default function ManageSEO() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink">SEO & Integrations</h1>
+        <h1 className="text-2xl font-bold text-ink">Marketing</h1>
         {msg && <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">{msg}</span>}
       </div>
 
@@ -117,9 +128,12 @@ export default function ManageSEO() {
           </>
         )}
 
-        {/* ROBOTS */}
-        {tab === "Robots.txt" && (
+        {/* ROBOTS — master_admin only */}
+        {tab === "Robots.txt" && isMaster && (
           <>
+            <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-700 font-medium">
+              ⚠ Master Admin only — changes here affect how Google crawls your site.
+            </div>
             <div className="rounded-xl border border-line bg-white p-4">
               <p className="mb-1 text-xs text-muted">Live at <code className="text-brand">/robots.txt</code> — tells search engines what to crawl.</p>
               <textarea
@@ -136,11 +150,51 @@ export default function ManageSEO() {
           </>
         )}
 
-        {/* CLAUDE CODE CONNECT */}
-        {tab === "Claude Code Connect" && (
+        {/* CONNECT AI */}
+        {tab === "ConnectAI" && (
           <>
+            {/* AI Subscriptions */}
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-ink">AI Subscriptions</p>
+              <p className="text-xs text-muted">Mark which AI tools you have active. This helps track what's available for your team.</p>
+              {AI_TOOLS.map(({ key, label, desc }) => {
+                const connected = !!merged[key];
+                return (
+                  <div key={key} className="flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">{label}</p>
+                      <p className="text-xs text-muted">{desc}</p>
+                      {key === "aiOtherConnected" && connected && (
+                        <input
+                          className="mt-2 w-full rounded-lg border border-line bg-gray-50 px-2 py-1 text-xs outline-none focus:border-brand"
+                          placeholder="e.g. OpenRouter, Mistral..."
+                          value={merged.aiOtherName || ""}
+                          onChange={(e) => set("aiOtherName", e.target.value)}
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {connected
+                        ? <span className="text-xs font-semibold text-green-600">✓ Connected</span>
+                        : <span className="text-xs font-semibold text-red-400">✗ Disconnected</span>}
+                      <button
+                        onClick={() => { set(key, !connected); }}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition ${connected ? "bg-red-50 text-red-500 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                        {connected ? "Disconnect" : "Connect"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}
+                className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                {saveMut.isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+
+            {/* Claude Code MCP */}
             <div className="rounded-xl border border-brand/30 bg-brand/5 p-5">
-              <p className="text-sm font-bold text-ink">Connect Claude Code</p>
+              <p className="text-sm font-bold text-ink">Claude Code Connect</p>
               <p className="mt-1 text-xs text-muted">
                 Connect your Claude Code subscription to this website. Claude Code can then manage SEO, update content, and view stats — no API key or extra charges needed.
               </p>
@@ -182,17 +236,6 @@ export default function ManageSEO() {
                     Copy
                   </button>
                 </div>
-              </div>
-
-              <div className="mt-4 rounded-lg border border-line bg-white p-4">
-                <p className="text-xs font-semibold text-ink">After connecting, Claude Code can:</p>
-                <ul className="mt-2 space-y-1 text-xs text-muted">
-                  <li>✓ Read and update SEO titles, descriptions, keywords</li>
-                  <li>✓ View all products and site stats</li>
-                  <li>✓ Update page content (hero text, descriptions, etc.)</li>
-                  <li>✓ Auto-generate and apply SEO improvements</li>
-                </ul>
-                <p className="mt-3 text-[10px] text-muted">Works with your existing Claude Pro/Max subscription. No API key. No extra cost.</p>
               </div>
             </div>
           </>

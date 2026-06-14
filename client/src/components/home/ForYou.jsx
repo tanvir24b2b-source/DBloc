@@ -1,9 +1,11 @@
 import EditableText from "../common/EditableText.jsx";
 import BlocCard from "../common/BlocCard.jsx";
+import { useReveal } from "../../hooks/useReveal.js";
 
 export default function ForYou({ blocs }) {
+  const ref = useReveal();
   return (
-    <section className="mx-auto max-w-7xl px-6 py-12">
+    <section ref={ref} className="reveal mx-auto max-w-7xl px-6 py-12">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-ink">
           <EditableText keyName="forYou.title" fallback="For You" />

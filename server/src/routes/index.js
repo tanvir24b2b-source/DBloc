@@ -89,6 +89,7 @@ router.put("/admin/integrations/:id", adminGuard, wrap(integrationCtrl.update));
 router.delete("/admin/integrations/:id", adminGuard, wrap(integrationCtrl.remove));
 
 // --- Admin ---
+router.get("/admin/search", adminGuard, wrap(admin.globalSearch));
 router.get("/admin/dashboard", adminGuard, wrap(admin.dashboard));
 router.get("/admin/analytics", adminGuard, wrap(admin.analytics));
 router.get("/admin/users", adminGuard, wrap(admin.listUsers));

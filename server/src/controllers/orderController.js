@@ -10,7 +10,7 @@ const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, mobile: u
 
 // Place order — joins a bloc. Auto-registers new users if password provided.
 export async function placeOrder(req, res) {
-  const { blocId, mobile, email, password, quantity = 1, paymentMethod = "cod" } = req.body;
+  const { blocId, mobile, email, password, quantity = 1, paymentMethod = "cod", transactionId = "" } = req.body;
   const customerName = req.body.customerName ? xss(req.body.customerName) : req.body.customerName;
   const address = req.body.address ? xss(req.body.address) : req.body.address;
 
@@ -70,7 +70,7 @@ export async function placeOrder(req, res) {
   const amount = bloc.blocPrice * qty;
   let order;
   try {
-    order = await Order.create({ user: user?._id, bloc: bloc._id, customerName, mobile, email, address, quantity: qty, amount, paymentMethod });
+    order = await Order.create({ user: user?._id, bloc: bloc._id, customerName, mobile, email, address, quantity: qty, amount, paymentMethod, transactionId });
   } catch (err) {
     // Order write failed — roll back the spot reservation
     await Bloc.findByIdAndUpdate(bloc._id, { $inc: { filledSpots: -qty } });

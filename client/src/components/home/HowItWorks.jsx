@@ -1,4 +1,5 @@
 import EditableText from "../common/EditableText.jsx";
+import { useReveal } from "../../hooks/useReveal.js";
 
 const steps = [
   { icon: "🔍", t: "how.step1Title", d: "how.step1Desc", tf: "Find a Bloc", df: "Browse active group-buy deals." },
@@ -7,8 +8,9 @@ const steps = [
 ];
 
 export default function HowItWorks() {
+  const ref = useReveal();
   return (
-    <section className="bg-white py-10 md:py-14">
+    <section ref={ref} className="reveal bg-white py-10 md:py-14">
       <div className="mx-auto max-w-5xl px-4 md:px-6">
         <h2 className="mb-8 text-center text-xl font-bold text-ink md:mb-10 md:text-2xl">
           <EditableText keyName="how.title" fallback="How D Bloc Works" />

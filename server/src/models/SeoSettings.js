@@ -21,6 +21,13 @@ const seoSchema = new mongoose.Schema({
 
   // Claude Code MCP token — no API key needed, uses user's Claude subscription
   mcpToken: { type: String, default: "" },
+
+  // AI subscription connection status (set manually by master_admin)
+  aiClaudeConnected:  { type: Boolean, default: false },
+  aiChatGPTConnected: { type: Boolean, default: false },
+  aiGeminiConnected:  { type: Boolean, default: false },
+  aiOtherConnected:   { type: Boolean, default: false },
+  aiOtherName:        { type: String,  default: "" },
 }, { timestamps: true });
 
 seoSchema.statics.getSingleton = async function () {

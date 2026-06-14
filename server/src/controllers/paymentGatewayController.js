@@ -1,10 +1,11 @@
 import PaymentGateway from "../models/PaymentGateway.js";
 
 const GATEWAY_DEFS = [
-  { type: "cod",        displayName: "Cash on Delivery", sortOrder: 0 },
-  { type: "sslcommerz", displayName: "SSLCommerz",       sortOrder: 1 },
-  { type: "bkash",      displayName: "bKash",            sortOrder: 2 },
-  { type: "nagad",      displayName: "Nagad",            sortOrder: 3 },
+  { type: "cod",          displayName: "Cash on Delivery", sortOrder: 0 },
+  { type: "sslcommerz",   displayName: "SSLCommerz",       sortOrder: 1 },
+  { type: "bkash",        displayName: "bKash (API)",      sortOrder: 2 },
+  { type: "bkashmanual",  displayName: "bKash (Manual)",   sortOrder: 3 },
+  { type: "nagad",        displayName: "Nagad",            sortOrder: 4 },
 ];
 
 // Seed default gateways on first run
@@ -18,12 +19,20 @@ export async function seedGateways() {
   }
 }
 
-// GET /api/payment-gateways  (public — no credentials returned)
+// GET /api/payment-gateways  (public — credentials hidden except manual payment info)
 export async function listPublic(req, res) {
-  const gateways = await PaymentGateway.find({ enabled: true })
-    .select("type displayName isDefault sortOrder")
-    .sort("sortOrder");
-  res.json({ gateways });
+  const gateways = await PaymentGateway.find({ enabled: true }).sort("sortOrder");
+  res.json({
+    gateways: gateways.map((gw) => {
+      const base = { _id: gw._id, type: gw.type, displayName: gw.displayName, isDefault: gw.isDefault, sortOrder: gw.sortOrder };
+      // Expose number+instructions for manual gateways so checkout can display them
+      if (gw.type === "bkashmanual" || gw.credentials?.isManual) {
+        base.manualNumber = gw.credentials?.number || "";
+        base.manualInstructions = gw.credentials?.instructions || "";
+      }
+      return base;
+    }),
+  });
 }
 
 // GET /api/admin/payment-gateways  (admin — full data)

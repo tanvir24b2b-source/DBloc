@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import Bloc from "../models/Bloc.js";
 import Order from "../models/Order.js";
+import Subscriber from "../models/Subscriber.js";
 
 const STAFF_ROLES = ["moderator", "subadmin", "admin", "master_admin"];
 
@@ -194,6 +195,24 @@ export async function updateStaff(req, res) {
 
   const updated = await User.findByIdAndUpdate(req.params.id, update, { new: true });
   res.json(updated);
+}
+
+export async function globalSearch(req, res) {
+  const q = String(req.query.q || "").trim();
+  if (!q) return res.json({ orders: [], customers: [], subscribers: [], blocs: [] });
+
+  const re = { $regex: q, $options: "i" };
+
+  const [orders, customers, subscribers, blocs] = await Promise.all([
+    Order.find({ $or: [{ orderId: re }, { customerName: re }, { mobile: re }, { email: re }] })
+      .select("orderId customerName mobile status amount createdAt").limit(5),
+    User.find({ role: "user", $or: [{ name: re }, { email: re }, { mobile: re }] })
+      .select("name email mobile createdAt").limit(5),
+    Subscriber.find({ email: re }).select("email createdAt").limit(5),
+    Bloc.find({ title: re }).select("title status blocPrice").limit(5),
+  ]);
+
+  res.json({ orders, customers, subscribers, blocs });
 }
 
 export async function deleteStaff(req, res) {

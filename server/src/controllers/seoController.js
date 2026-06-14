@@ -23,8 +23,13 @@ export async function updateSettings(req, res) {
   const allowed = [
     "siteTitle", "siteDescription", "siteKeywords", "ogImage", "canonicalUrl",
     "googleTagManagerId", "googleAnalyticsId", "googleSearchConsoleCode",
-    "facebookPixelId", "facebookCapiToken", "robotsTxt",
+    "facebookPixelId", "facebookCapiToken",
+    "aiClaudeConnected", "aiChatGPTConnected", "aiGeminiConnected", "aiOtherConnected", "aiOtherName",
   ];
+  // robotsTxt is master_admin only
+  if (req.user?.role === "master_admin" && req.body.robotsTxt !== undefined) {
+    seo.robotsTxt = req.body.robotsTxt;
+  }
   allowed.forEach((k) => { if (req.body[k] !== undefined) seo[k] = req.body[k]; });
   await seo.save();
   res.json({ message: "SEO settings saved" });

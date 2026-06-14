@@ -30,6 +30,7 @@ export const defaultContent = [
   { key: "hero.ctaText", value: "BROWSE BLOCS", type: "text", page: "home", group: "Hero", label: "CTA Button Text" },
   { key: "hero.ctaUrl", value: "/blocs", type: "url", page: "home", group: "Hero", label: "CTA Button Link" },
   { key: "hero.bgColor", value: "#111827", type: "color", page: "home", group: "Hero", label: "Hero Background Color" },
+  { key: "hero.bgImage", value: "", type: "image", page: "home", group: "Hero", label: "Hero Background Image (1440×700px)" },
   { key: "hero.countdownLabel", value: "NEXT BLOC CLOSES IN", type: "text", page: "home", group: "Hero", label: "Countdown Label" },
 
   // ---------- TICKER ----------
