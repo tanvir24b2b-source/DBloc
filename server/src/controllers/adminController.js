@@ -212,7 +212,8 @@ export async function globalSearch(req, res) {
   const q = String(req.query.q || "").trim();
   if (!q) return res.json({ orders: [], customers: [], subscribers: [], blocs: [] });
 
-  const re = { $regex: q, $options: "i" };
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = { $regex: escaped, $options: "i" };
 
   const [orders, customers, subscribers, blocs] = await Promise.all([
     Order.find({ $or: [{ orderId: re }, { customerName: re }, { mobile: re }, { email: re }] })

@@ -180,7 +180,7 @@ export async function editOrder(req, res) {
       if (isNaN(n) || n < 0) continue; // reject negative or non-numeric
       order[key] = n;
     } else {
-      order[key] = req.body[key];
+      order[key] = ["customerName", "address", "note"].includes(key) ? xss(req.body[key]) : req.body[key];
     }
   }
   await order.save();
