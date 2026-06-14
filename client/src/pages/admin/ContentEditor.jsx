@@ -22,9 +22,15 @@ function HeroBgImageUpload({ items, onSaved }) {
       const val = ev.target.result;
       setPreview(val);
       setSaving(true);
-      await api.put("/content/hero.bgImage", { value: val });
-      setSaving(false);
-      onSaved("hero.bgImage", val);
+      try {
+        await api.put("/content/hero.bgImage", { value: val });
+        onSaved("hero.bgImage", val);
+      } catch {
+        setPreview(item?.value || "");
+        alert("Image too large or upload failed. Try a smaller image.");
+      } finally {
+        setSaving(false);
+      }
     };
     reader.readAsDataURL(file);
   }

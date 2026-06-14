@@ -13,6 +13,7 @@ const TEMPLATE_LABELS = {
 
 export default function ManageEmail() {
   const [s, setS] = useState(null);
+  const [loadErr, setLoadErr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [testEmail, setTestEmail] = useState("");
@@ -21,7 +22,9 @@ export default function ManageEmail() {
   const [activeTab, setActiveTab] = useState("connection");
 
   useEffect(() => {
-    api.get("/admin/email").then(({ data }) => setS(data.settings));
+    api.get("/admin/email")
+      .then(({ data }) => setS(data.settings))
+      .catch(() => setLoadErr(true));
   }, []);
 
   function set(key, val) {
@@ -55,6 +58,7 @@ export default function ManageEmail() {
     } finally { setTestBusy(false); }
   }
 
+  if (loadErr) return <div className="p-8 text-sm text-red-400">Failed to load email settings. Check server connection.</div>;
   if (!s) return <div className="p-8 text-sm text-gray-400">Loading...</div>;
 
   const TAB = (id, label) => (

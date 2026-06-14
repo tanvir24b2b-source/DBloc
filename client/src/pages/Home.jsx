@@ -14,16 +14,19 @@ import SeoHead from "../components/common/SeoHead.jsx";
 export default function Home() {
   const { data: blocs = [] } = useBlocs();
   const activeBlocs = blocs.filter((b) => b.status === "active");
+  const expiredBlocs = blocs.filter((b) => b.status === "expired" || b.status === "full");
+  // If no active blocs, show expired/full ones as fallback so sections aren't blank
+  const displayBlocs = activeBlocs.length ? activeBlocs : expiredBlocs.slice(0, 8);
   const featured = activeBlocs.filter((b) => b.featured);
-  const heroBlocs = featured.length ? featured : activeBlocs;
+  const heroBlocs = featured.length ? featured : (activeBlocs.length ? activeBlocs : expiredBlocs.slice(0, 4));
 
   return (
     <>
       <SeoHead pageKey="home" />
       <Hero featured={heroBlocs} />
       <Ticker />
-      <ActiveBlocs blocs={activeBlocs} />
-      <EndingSoon blocs={activeBlocs} />
+      <ActiveBlocs blocs={displayBlocs} />
+      <EndingSoon blocs={blocs} />
       <HowItWorks />
       <ForYou blocs={heroBlocs} />
 

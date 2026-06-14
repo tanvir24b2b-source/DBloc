@@ -4,8 +4,8 @@ import BlocCarousel from "../common/BlocCarousel.jsx";
 import { getCountdown } from "../../lib/format.js";
 import { useReveal } from "../../hooks/useReveal.js";
 
-// Blocs that are active AND close within the next 24 hours.
-export function endingSoon(blocs) {
+// Blocs ending within 24 hours
+function endingIn24h(blocs) {
   return blocs.filter((b) => {
     if (b.status !== "active") return false;
     const { h, expired } = getCountdown(b.endTime);
@@ -15,7 +15,24 @@ export function endingSoon(blocs) {
 
 export default function EndingSoon({ blocs }) {
   const ref = useReveal();
-  const items = endingSoon(blocs);
+
+  const urgent = endingIn24h(blocs);
+  const activeAll = blocs.filter((b) => b.status === "active");
+  const expired = blocs.filter((b) => b.status === "expired" || b.status === "full");
+
+  // Priority: < 24h active → all active sorted by soonest end → expired fallback
+  let items, isUrgent;
+  if (urgent.length) {
+    items = urgent;
+    isUrgent = true;
+  } else if (activeAll.length) {
+    items = [...activeAll].sort((a, b) => new Date(a.endTime) - new Date(b.endTime)).slice(0, 8);
+    isUrgent = false;
+  } else {
+    items = expired.slice(0, 8);
+    isUrgent = false;
+  }
+
   if (items.length === 0) return null;
 
   return (
@@ -26,7 +43,7 @@ export default function EndingSoon({ blocs }) {
           <h2 className="text-2xl font-bold text-ink">
             <EditableText keyName="endingSoon.title" fallback="Ending Soon" />
           </h2>
-          <span className="rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-bold text-danger">&lt; 24 HRS</span>
+          {isUrgent && <span className="rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-bold text-danger">&lt; 24 HRS</span>}
         </div>
         <Link to="/blocs" className="text-xs font-bold tracking-wide text-brand hover:underline">
           <EditableText keyName="endingSoon.viewAll" fallback="VIEW ALL" /> →

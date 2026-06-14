@@ -5,11 +5,14 @@ const INP = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-
 
 export default function ManageCouriers() {
   const [form, setForm] = useState(null);
+  const [loadErr, setLoadErr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg]   = useState("");
 
   useEffect(() => {
-    api.get("/admin/courier-settings").then(({ data }) => setForm(data));
+    api.get("/admin/courier-settings")
+      .then(({ data }) => setForm(data))
+      .catch(() => setLoadErr(true));
   }, []);
 
   function set(key, value) {
@@ -28,6 +31,7 @@ export default function ManageCouriers() {
     } finally { setBusy(false); }
   }
 
+  if (loadErr) return <div className="p-8 text-sm text-red-400">Failed to load courier settings. Check server connection.</div>;
   if (!form) return <div className="p-8 text-sm text-gray-400">Loading...</div>;
 
   return (
