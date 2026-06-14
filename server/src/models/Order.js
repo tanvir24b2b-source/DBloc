@@ -48,13 +48,16 @@ orderSchema.pre("save", async function (next) {
   const maxDoc = await mongoose.model("Order")
     .findOne({ orderId: { $exists: true, $ne: null } }, { orderId: 1 })
     .sort({ orderId: -1 });
-  const maxNum = maxDoc?.orderId ? parseInt(maxDoc.orderId.replace("DB", ""), 10) : 0;
+  const parsed = maxDoc?.orderId ? parseInt(maxDoc.orderId.replace(/\D/g, ""), 10) : 0;
+  const maxNum = isNaN(parsed) ? 0 : parsed;
   // Ensure counter is at least at maxNum, then atomically increment
-  await mongoose.model("Counter").updateOne(
-    { _id: "orderId", seq: { $lt: maxNum } },
-    { $set: { seq: maxNum } },
-    { upsert: true }
-  );
+  if (maxNum > 0) {
+    await mongoose.model("Counter").updateOne(
+      { _id: "orderId", seq: { $lt: maxNum } },
+      { $set: { seq: maxNum } },
+      { upsert: true }
+    );
+  }
   const counter = await mongoose.model("Counter").findOneAndUpdate(
     { _id: "orderId" },
     { $inc: { seq: 1 } },
