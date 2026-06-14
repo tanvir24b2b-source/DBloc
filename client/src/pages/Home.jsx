@@ -14,11 +14,11 @@ import SeoHead from "../components/common/SeoHead.jsx";
 export default function Home() {
   const { data: blocs = [] } = useBlocs();
   const activeBlocs = blocs.filter((b) => b.status === "active");
-  const expiredBlocs = blocs.filter((b) => b.status === "expired" || b.status === "full");
-  // If no active blocs, show expired/full ones as fallback so sections aren't blank
-  const displayBlocs = activeBlocs.length ? activeBlocs : expiredBlocs.slice(0, 8);
+  // Fallback: most recent blocs sorted by createdAt (no status filter — works regardless of status string)
+  const recentBlocs = [...blocs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const displayBlocs = activeBlocs.length ? activeBlocs : recentBlocs.slice(0, 8);
   const featured = activeBlocs.filter((b) => b.featured);
-  const heroBlocs = featured.length ? featured : (activeBlocs.length ? activeBlocs : expiredBlocs.slice(0, 4));
+  const heroBlocs = featured.length ? featured : (activeBlocs.length ? activeBlocs : recentBlocs.slice(0, 4));
 
   return (
     <>

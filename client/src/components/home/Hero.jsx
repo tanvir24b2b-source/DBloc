@@ -39,16 +39,21 @@ function MobileCountdown({ t, spotsLeft }) {
       <div className="mt-1.5 rounded-xl bg-white/10 py-2 text-center ring-1 ring-white/10">
         <span className="text-2xl font-extrabold tabular-nums text-white">{pad(t.d)} DAY</span>
       </div>
-      {/* HRS : MIN — centered under DAY box */}
-      <div className="mt-2 flex items-end justify-center gap-2">
-        <div className="text-center">
-          <span className="text-2xl font-extrabold tabular-nums text-white">{pad(t.h)}</span>
-          <p className="text-[9px] font-bold tracking-widest text-gray-400">HRS</p>
+      {/* HRS : MIN : SEC — centered under DAY box */}
+      <div className="mt-2 flex items-end justify-center gap-1.5">
+        <div className="w-8 text-center">
+          <span key={t.h} className="text-xl font-extrabold tabular-nums text-white" style={{ display: "inline-block", animation: "tickIn 200ms ease-out" }}>{pad(t.h)}</span>
+          <p className="text-[8px] font-bold tracking-widest text-gray-400">HRS</p>
         </div>
-        <span className="pb-3 text-xl font-bold text-gray-500">:</span>
-        <div className="text-center">
-          <span className="text-2xl font-extrabold tabular-nums text-white">{pad(t.m)}</span>
-          <p className="text-[9px] font-bold tracking-widest text-gray-400">MIN</p>
+        <span className="pb-3 text-base font-bold text-gray-500">:</span>
+        <div className="w-8 text-center">
+          <span key={t.m} className="text-xl font-extrabold tabular-nums text-white" style={{ display: "inline-block", animation: "tickIn 200ms ease-out" }}>{pad(t.m)}</span>
+          <p className="text-[8px] font-bold tracking-widest text-gray-400">MIN</p>
+        </div>
+        <span className="pb-3 text-base font-bold text-gray-500">:</span>
+        <div className="w-8 text-center">
+          <span key={t.s} className="text-xl font-extrabold tabular-nums text-white" style={{ display: "inline-block", animation: "tickIn 200ms ease-out" }}>{pad(t.s)}</span>
+          <p className="text-[8px] font-bold tracking-widest text-gray-400">SEC</p>
         </div>
       </div>
       <p className="mt-2 text-[11px] font-semibold text-brand animate-soft-pulse">
@@ -62,8 +67,8 @@ function MobileCountdown({ t, spotsLeft }) {
 function FlipCell({ value, label }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-16 rounded-xl bg-white/[0.07] py-2 text-center shadow-lg ring-1 ring-white/10 backdrop-blur">
-        <span className="text-3xl font-extrabold tabular-nums text-white">{pad(value)}</span>
+      <div className="relative w-14 overflow-hidden rounded-xl bg-white/[0.07] py-2 text-center shadow-lg ring-1 ring-white/10 backdrop-blur">
+        <span key={value} className="text-3xl font-extrabold tabular-nums text-white" style={{ display: "inline-block", animation: "tickIn 200ms ease-out" }}>{pad(value)}</span>
         <span className="absolute inset-x-0 top-1/2 h-px bg-black/30" />
       </div>
       <span className="mt-1 text-[10px] font-semibold tracking-widest text-gray-400">{label}</span>
@@ -147,6 +152,10 @@ function MiniCard({ top, t, spotsLeft, currency }) {
   );
 }
 
+const TICK_STYLE = (
+  <style>{`@keyframes tickIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}`}</style>
+);
+
 export default function Hero({ featured }) {
   const bg = useText("hero.bgColor", "#111827");
   const bgImage = useText("hero.bgImage", "");
@@ -174,6 +183,7 @@ export default function Hero({ featured }) {
 
   return (
     <section className="relative overflow-hidden text-white" style={sectionStyle}>
+      {TICK_STYLE}
       {/* Dark overlay when bgImage is set */}
       {bgImage && (
         <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
@@ -257,10 +267,12 @@ export default function Hero({ featured }) {
             <div className="rounded-xl bg-white/10 px-6 py-2 text-center ring-1 ring-white/10">
               <span className="text-2xl font-extrabold tabular-nums text-white">{pad(t.d)} DAY</span>
             </div>
-            <div className="mt-2 flex items-end justify-center gap-2">
+            <div className="mt-2 flex items-end justify-center gap-1.5">
               <FlipCell value={t.h} label="HRS" />
-              <span className="pb-4 text-2xl font-bold text-gray-500">:</span>
+              <span className="pb-4 text-xl font-bold text-gray-500">:</span>
               <FlipCell value={t.m} label="MIN" />
+              <span className="pb-4 text-xl font-bold text-gray-500">:</span>
+              <FlipCell value={t.s} label="SEC" />
             </div>
             <div className="mt-3 h-px w-40 bg-gradient-to-r from-transparent via-brand to-transparent" />
             <p className="animate-soft-pulse mt-2 text-xs font-semibold text-brand">
