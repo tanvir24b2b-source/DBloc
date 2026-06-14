@@ -44,6 +44,7 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
     note:           order.note || "",
     courierName:    order.courierName || "",
     bloc:           order.bloc?._id || order.bloc || "",
+    quantity:       order.quantity ?? 1,
   });
   const [busy, setBusy]         = useState(false);
   const [msg, setMsg]           = useState("");
@@ -58,7 +59,8 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const productPrice  = order.amount ?? 0;
+  const unitPrice     = order.bloc?.blocPrice ?? order.amount ?? 0;
+  const productPrice  = unitPrice * (Number(form.quantity) || 1);
   const delivery      = Number(form.deliveryCharge) || 0;
   const discount      = Number(form.discount) || 0;
   const total         = productPrice + delivery - discount;
@@ -147,7 +149,18 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 text-base leading-tight">{order.bloc?.title || "—"}</p>
               {order.bloc?.blocPrice && (
-                <p className="text-xs text-gray-500 mt-0.5">Bloc price: ৳{formatPrice(order.bloc.blocPrice)} × {order.quantity ?? 1}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500">৳{formatPrice(order.bloc.blocPrice)} ×</span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={isShipped || form.quantity <= 1}
+                      onClick={() => setForm((f) => ({ ...f, quantity: Math.max(1, f.quantity - 1) }))}
+                      className="h-5 w-5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">−</button>
+                    <span className="w-6 text-center text-sm font-semibold text-gray-800">{form.quantity}</span>
+                    <button type="button" disabled={isShipped}
+                      onClick={() => setForm((f) => ({ ...f, quantity: f.quantity + 1 }))}
+                      className="h-5 w-5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">+</button>
+                  </div>
+                </div>
               )}
               <div className="mt-3 space-y-0.5 text-xs text-gray-600">
                 <div className="flex justify-between"><span>Product</span><span>৳{formatPrice(productPrice)}</span></div>

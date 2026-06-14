@@ -4,12 +4,12 @@ import EditableText from "../common/EditableText.jsx";
 import { useReveal } from "../../hooks/useReveal.js";
 
 const REVIEW_KEYS = [
-  { t: "reviews.r1Text", n: "reviews.r1Name", tf: "Got my soundbar at almost half price. The Bloc filled up in hours!",  nf: "Rahim, Dhaka" },
-  { t: "reviews.r2Text", n: "reviews.r2Name", tf: "So simple. Joined a Bloc, paid wholesale, delivered in 3 days.",      nf: "Sadia, Chittagong" },
-  { t: "reviews.r3Text", n: "reviews.r3Name", tf: "Best prices in Bangladesh. No middleman markup at all.",              nf: "Karim, Sylhet" },
-  { t: "reviews.r4Text", n: "reviews.r4Name", tf: "Ordered the air fryer with friends. Got it at almost wholesale.",     nf: "Fatema, Rajshahi" },
-  { t: "reviews.r5Text", n: "reviews.r5Name", tf: "Already joined 3 blocs this month. The deals are real!",             nf: "Arif, Comilla" },
-  { t: "reviews.r6Text", n: "reviews.r6Name", tf: "Never thought I could afford noise-cancelling headphones.",           nf: "Mitu, Khulna" },
+  { t: "reviews.r1Text", n: "reviews.r1Name", tf: "Got my soundbar at almost half price. The Bloc filled up in hours!",  nf: "Rahim, Dhaka",      ago: "2 weeks ago" },
+  { t: "reviews.r2Text", n: "reviews.r2Name", tf: "So simple. Joined a Bloc, paid wholesale, delivered in 3 days.",      nf: "Sadia, Chittagong", ago: "1 month ago" },
+  { t: "reviews.r3Text", n: "reviews.r3Name", tf: "Best prices in Bangladesh. No middleman markup at all.",              nf: "Karim, Sylhet",     ago: "3 weeks ago" },
+  { t: "reviews.r4Text", n: "reviews.r4Name", tf: "Ordered the air fryer with friends. Got it at almost wholesale.",     nf: "Fatema, Rajshahi",  ago: "5 days ago" },
+  { t: "reviews.r5Text", n: "reviews.r5Name", tf: "Already joined 3 blocs this month. The deals are real!",             nf: "Arif, Comilla",     ago: "2 months ago" },
+  { t: "reviews.r6Text", n: "reviews.r6Name", tf: "Never thought I could afford noise-cancelling headphones.",           nf: "Mitu, Khulna",      ago: "1 week ago" },
 ];
 
 const VISIBLE = 3;
@@ -101,14 +101,21 @@ export default function Reviews() {
                 const name = map[r.n] ?? r.nf;
                 return (
                   <div key={i} className="shrink-0 px-2" style={{ width: `${step}%` }}>
-                    <div className="rounded-xl border border-line bg-cream p-6 h-full">
-                      <div className="mb-3 text-brand">★★★★★</div>
-                      <p className="text-sm leading-relaxed text-ink/80">
-                        "<EditableText keyName={r.t} fallback={r.tf} />"
+                    <div className="rounded-xl border border-line bg-white p-5 h-full flex flex-col gap-3">
+                      <div className="text-2xl text-brand leading-none">★</div>
+                      <p className="text-sm leading-relaxed text-ink/80 flex-1">
+                        <EditableText keyName={r.t} fallback={r.tf} />
                       </p>
-                      <p className="mt-4 text-xs font-semibold text-muted">
-                        — <EditableText keyName={r.n} fallback={r.nf} />
-                      </p>
+                      <div className="border-t border-line pt-3 flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full bg-brand/10 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0">
+                          {(map[r.n] ?? r.nf).charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-ink truncate"><EditableText keyName={r.n} fallback={r.nf} /></p>
+                          <p className="text-[10px] text-muted">{r.ago}</p>
+                        </div>
+                        <div className="ml-auto text-brand text-[10px] tracking-tight flex-shrink-0">★★★★★</div>
+                      </div>
                     </div>
                   </div>
                 );

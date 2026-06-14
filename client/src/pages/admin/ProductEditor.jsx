@@ -302,9 +302,14 @@ export default function ProductEditor() {
         <button type="button" onClick={handleSave} disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2 text-xs font-bold text-white hover:bg-black disabled:opacity-60">
           <span>💾</span>
-          {saving ? "SAVING..." : saved ? "✓ SAVED" : "SAVE CHANGES"}
+          {saving ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </div>
+      {saved && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg">
+          ✓ Product saved successfully
+        </div>
+      )}
 
       <div className="grid grid-cols-[1fr_280px] items-start gap-5">
         {/* ── Left column ── */}
@@ -379,7 +384,17 @@ export default function ProductEditor() {
           {/* 03 Product Media */}
           <Section num={3} title="Product Media">
             <div className="grid grid-cols-2 gap-6">
-              <ImagePicker label="Main Hero Visual" value={form.image} onChange={set("image")} />
+              <div>
+                <ImagePicker label="Main Hero Visual" value={form.image} onChange={set("image")} />
+                <div className="mt-2 flex gap-2" style={{ maxWidth: 200 }}>
+                  <input
+                    placeholder="Or paste image URL..."
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none focus:border-brand"
+                    onBlur={(e) => { if (e.target.value.trim()) { set("image")(e.target.value.trim()); e.target.value = ""; } }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (e.target.value.trim()) { set("image")(e.target.value.trim()); e.target.value = ""; } } }}
+                  />
+                </div>
+              </div>
               <div>
                 <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
                   Resource Gallery <span className="text-gray-300">({form.gallery.length} Assets)</span>
