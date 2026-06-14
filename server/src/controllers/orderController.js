@@ -177,13 +177,18 @@ export async function editOrder(req, res) {
     if (req.body[key] === undefined) continue;
     if (key === "deliveryCharge" || key === "discount") {
       const n = Number(req.body[key]);
-      if (isNaN(n) || n < 0) continue; // reject negative or non-numeric
+      if (isNaN(n) || n < 0) continue;
       order[key] = n;
     } else {
       order[key] = ["customerName", "address", "note"].includes(key) ? xss(req.body[key]) : req.body[key];
     }
   }
+  if (req.body.bloc && req.body.bloc !== String(order.bloc)) {
+    order.changeLog.push({ field: "bloc", from: String(order.bloc), to: req.body.bloc });
+    order.bloc = req.body.bloc;
+  }
   await order.save();
+  await order.populate("bloc", "title image blocPrice");
   res.json(order);
 }
 
@@ -193,7 +198,7 @@ export async function allOrders(req, res) {
   const limit = Math.min(100, parseInt(req.query.limit) || 50);
   const skip = (page - 1) * limit;
   const [orders, total] = await Promise.all([
-    Order.find().populate("bloc", "title").sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Order.find().populate("bloc", "title image blocPrice").sort({ createdAt: -1 }).skip(skip).limit(limit),
     Order.countDocuments(),
   ]);
   res.json({ orders, total, page, pages: Math.ceil(total / limit) });

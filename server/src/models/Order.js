@@ -34,6 +34,13 @@ const orderSchema = new mongoose.Schema(
     consignmentId:   { type: String, default: "" },
     trackingStatus:  { type: String, default: "" },
     lastCourierSync: { type: Date },
+
+    changeLog: [{
+      field: { type: String },
+      from:  { type: String },
+      to:    { type: String },
+      at:    { type: Date, default: Date.now },
+    }],
   },
   { timestamps: true }
 );

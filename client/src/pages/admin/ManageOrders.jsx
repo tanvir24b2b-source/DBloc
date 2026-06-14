@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api.js";
 import { formatPrice } from "../../lib/format.js";
+import { useBlocs } from "../../hooks/useBlocs.js";
 
 const ALL_STATUSES = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "pending_return", "returned"];
 const PRE_SHIP     = ["pending", "confirmed", "processing", "cancelled"];
@@ -30,6 +31,8 @@ function isOnlinePaid(paymentMethod) {
 }
 
 function OrderEditPanel({ order, onClose, onUpdated }) {
+  const { data: allBlocs = [] } = useBlocs();
+
   const [form, setForm] = useState({
     customerName:   order.customerName || "",
     mobile:         order.mobile || "",
@@ -40,9 +43,10 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
     discount:       order.discount ?? 0,
     note:           order.note || "",
     courierName:    order.courierName || "",
+    bloc:           order.bloc?._id || order.bloc || "",
   });
-  const [busy, setBusy]     = useState(false);
-  const [msg, setMsg]       = useState("");
+  const [busy, setBusy]         = useState(false);
+  const [msg, setMsg]           = useState("");
   const [shipping, setShipping] = useState(false);
   const [blocking, setBlocking] = useState(false);
 
@@ -51,14 +55,23 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const productPrice  = order.amount ?? 0;
+  const delivery      = Number(form.deliveryCharge) || 0;
+  const discount      = Number(form.discount) || 0;
+  const total         = productPrice + delivery - discount;
+
+  const blocChanged = form.bloc && form.bloc !== String(order.bloc?._id || order.bloc);
+
   async function save(e) {
     e.preventDefault();
     setBusy(true); setMsg("");
     try {
-      const { data } = await api.put(`/orders/${order._id}/edit`, form);
+      const payload = { ...form };
+      if (!blocChanged) delete payload.bloc;
+      const { data } = await api.put(`/orders/${order._id}/edit`, payload);
       setMsg("✓ Saved");
       onUpdated(data);
-      setTimeout(() => setMsg(""), 2000);
+      setTimeout(() => setMsg(""), 2500);
     } catch (err) {
       setMsg(err.response?.data?.message || "Failed to save");
     } finally { setBusy(false); }
@@ -70,7 +83,7 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
       const { data } = await api.put(`/admin/orders/${order._id}/note`, { note: form.note });
       setMsg("✓ Note saved");
       onUpdated(data);
-      setTimeout(() => setMsg(""), 2000);
+      setTimeout(() => setMsg(""), 2500);
     } catch { setMsg("Failed to save note"); }
     finally { setBusy(false); }
   }
@@ -99,82 +112,116 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
   const INP = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-50 disabled:text-gray-400";
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 rounded-t-2xl">
           <div>
-            <p className="font-bold text-gray-900">{order.orderId}</p>
+            <p className="font-bold text-gray-900 text-lg">{order.orderId}</p>
             <p className="text-xs text-gray-400">{fmt(order.createdAt)}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${statusColors[order.status] || "bg-gray-100 text-gray-600"}`}>
+          <div className="flex items-center gap-3">
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${statusColors[order.status] || "bg-gray-100 text-gray-600"}`}>
               {order.status?.replace("_", " ")}
             </span>
-            <button onClick={onClose} className="text-xl text-gray-400 hover:text-gray-700">×</button>
+            {isOnlinePaid(order.paymentMethod) ? (
+              <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700">Online Paid</span>
+            ) : (
+              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">COD</span>
+            )}
+            <button onClick={onClose} className="text-2xl leading-none text-gray-400 hover:text-gray-700">×</button>
           </div>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Payment badge */}
-          <div className="flex items-center gap-2">
-            {isOnlinePaid(order.paymentMethod) ? (
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">🟢 Online Payment Received</span>
-            ) : (
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600">💵 Cash on Delivery</span>
+        <div className="p-6 space-y-6">
+
+          {/* Product card */}
+          <div className="flex gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+            {order.bloc?.image && (
+              <img src={order.bloc.image} alt={order.bloc.title} className="h-20 w-20 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
             )}
-            {order.transactionId && (
-              <span className="text-xs font-mono text-purple-600">TrxID: {order.transactionId}</span>
-            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-base leading-tight">{order.bloc?.title || "—"}</p>
+              {order.bloc?.blocPrice && (
+                <p className="text-xs text-gray-500 mt-0.5">Bloc price: ৳{formatPrice(order.bloc.blocPrice)} × {order.quantity ?? 1}</p>
+              )}
+              <div className="mt-3 space-y-0.5 text-xs text-gray-600">
+                <div className="flex justify-between"><span>Product</span><span>৳{formatPrice(productPrice)}</span></div>
+                <div className="flex justify-between"><span>Delivery</span><span>+৳{formatPrice(delivery)}</span></div>
+                {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>−৳{formatPrice(discount)}</span></div>}
+                <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-1 mt-1">
+                  <span>Total</span><span>৳{formatPrice(total)}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Consignment info (after shipping) */}
+          {/* Consignment info */}
           {order.consignmentId && (
             <div className="rounded-lg bg-purple-50 border border-purple-200 px-4 py-3">
               <p className="text-[10px] font-bold uppercase text-purple-400 mb-1">Courier</p>
               <p className="text-sm font-semibold text-purple-800 capitalize">{order.courierName} — {order.consignmentId}</p>
-              {order.trackingStatus && (
-                <p className="text-xs text-purple-600 mt-0.5">Status: {order.trackingStatus}</p>
-              )}
+              {order.trackingStatus && <p className="text-xs text-purple-600 mt-0.5">Status: {order.trackingStatus}</p>}
             </div>
           )}
 
+          {order.transactionId && (
+            <p className="text-xs font-mono text-purple-600">TrxID: {order.transactionId}</p>
+          )}
+
           {/* Edit form */}
-          <form onSubmit={save} className="space-y-3">
+          <form onSubmit={save} className="space-y-4">
             <p className="text-[10px] font-bold uppercase text-gray-400">Customer Details</p>
-            {[
-              ["customerName", "Full Name", "text"],
-              ["mobile", "Mobile", "tel"],
-              ["email", "Email", "email"],
-              ["address", "Address", "text"],
-            ].map(([k, label, type]) => (
-              <div key={k}>
-                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>
-                <input type={type} value={form[k]} onChange={set(k)} disabled={isShipped} className={INP} />
+            <div className="grid grid-cols-2 gap-3">
+              {[["customerName","Full Name","text"],["mobile","Mobile","tel"],["email","Email","email"]].map(([k, label, type]) => (
+                <div key={k}>
+                  <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>
+                  <input type={type} value={form[k]} onChange={set(k)} disabled={isShipped} className={INP} />
+                </div>
+              ))}
+              <div className="col-span-2">
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Address</label>
+                <input type="text" value={form.address} onChange={set("address")} disabled={isShipped} className={INP} />
               </div>
-            ))}
+            </div>
 
             <p className="text-[10px] font-bold uppercase text-gray-400 pt-1">Delivery & Pricing</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Delivery Zone</label>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Zone</label>
                 <select value={form.deliveryZone} onChange={set("deliveryZone")} disabled={isShipped} className={INP}>
                   <option value="inside_dhaka">Inside Dhaka</option>
                   <option value="outside_dhaka">Outside Dhaka</option>
-                  <option value="free">Free Delivery</option>
+                  <option value="free">Free</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Delivery Charge (৳)</label>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Delivery (৳)</label>
                 <input type="number" min="0" value={form.deliveryCharge} onChange={set("deliveryCharge")} disabled={isShipped} className={INP} />
               </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Discount (৳)</label>
-              <input type="number" min="0" value={form.discount} onChange={set("discount")} disabled={isShipped} className={INP} />
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Discount (৳)</label>
+                <input type="number" min="0" value={form.discount} onChange={set("discount")} disabled={isShipped} className={INP} />
+              </div>
             </div>
 
-            {/* Courier selection (only before shipping) */}
+            {/* Product change */}
+            {!isShipped && (
+              <div>
+                <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Change Product</label>
+                <select value={form.bloc} onChange={set("bloc")} className={INP}>
+                  {allBlocs.map((b) => (
+                    <option key={b._id} value={b._id}>{b.title} {b.status !== "active" ? `(${b.status})` : ""}</option>
+                  ))}
+                </select>
+                {blocChanged && (
+                  <p className="mt-1 text-xs text-orange-500">Product will be changed. This will be logged in change history.</p>
+                )}
+              </div>
+            )}
+
+            {/* Courier selection */}
             {!isShipped && (
               <div>
                 <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Courier</label>
@@ -190,14 +237,14 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
               <>
                 {msg && <p className={`text-xs ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
                 <button type="submit" disabled={busy}
-                  className="w-full rounded-lg bg-brand py-2 text-sm font-bold text-white disabled:opacity-50">
+                  className="w-full rounded-lg bg-brand py-2.5 text-sm font-bold text-white disabled:opacity-50">
                   {busy ? "Saving..." : "Save Changes"}
                 </button>
               </>
             )}
           </form>
 
-          {/* Note — always editable */}
+          {/* Note */}
           <div>
             <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">
               Note {isShipped && <span className="text-purple-500">(syncs to courier)</span>}
@@ -223,6 +270,25 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
             </button>
           )}
 
+          {/* Change log */}
+          {order.changeLog?.length > 0 && (
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Change History</p>
+              <div className="space-y-1.5">
+                {order.changeLog.map((log, i) => (
+                  <div key={i} className="rounded-lg bg-yellow-50 border border-yellow-100 px-3 py-2 text-xs text-gray-700">
+                    <span className="font-semibold capitalize">{log.field}</span> changed
+                    {log.field === "bloc"
+                      ? <span> — product updated</span>
+                      : <span> from <span className="font-mono">{log.from}</span> to <span className="font-mono">{log.to}</span></span>
+                    }
+                    {log.at && <span className="ml-2 text-gray-400">{fmt(log.at)}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Block customer */}
           {order.user && (
             <div className="border-t border-gray-100 pt-4">
@@ -233,6 +299,7 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
               <p className="mt-1 text-center text-[10px] text-gray-400">Blocks phone number from placing future orders</p>
             </div>
           )}
+
         </div>
       </div>
     </div>
