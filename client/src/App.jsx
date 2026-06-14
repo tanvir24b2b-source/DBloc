@@ -34,6 +34,7 @@ import ManageSEO from "./pages/admin/ManageSEO.jsx";
 import ManagePaymentGateways from "./pages/admin/ManagePaymentGateways.jsx";
 import ManageSms from "./pages/admin/ManageSms.jsx";
 import ManageIntegrations from "./pages/admin/ManageIntegrations.jsx";
+import ManageCouriers from "./pages/admin/ManageCouriers.jsx";
 
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
@@ -82,6 +83,7 @@ export default function App() {
         <Route path="settings" element={<SiteSettings />} />
         <Route path="seo" element={<ManageSEO />} />
         <Route path="payment-gateways" element={<ManagePaymentGateways />} />
+        <Route path="couriers" element={<ManageCouriers />} />
         <Route path="sms" element={<ManageSms />} />
         <Route path="integrations" element={<ManageIntegrations />} />
       </Route>

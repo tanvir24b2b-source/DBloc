@@ -11,6 +11,7 @@ import routes from "./routes/index.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import { getRobots } from "./controllers/seoController.js";
 import { mcpHandler } from "./controllers/mcpController.js";
+import { syncCourierStatuses } from "./controllers/courierController.js";
 
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   console.error("✗ JWT_SECRET and JWT_REFRESH_SECRET must be set in .env. Refusing to start.");
@@ -59,6 +60,13 @@ app.post("/api/orders", orderLimiter);
 
 app.use("/uploads", express.static(new URL("../public/images", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")));
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "D BLOC API" }));
+
+// Fire courier sync on server wake (non-blocking, 1-hour cooldown enforced inside)
+app.use("/api", (req, res, next) => {
+  syncCourierStatuses(null, null).catch(() => {});
+  next();
+});
+
 app.use("/api", routes);
 
 // robots.txt and MCP server (top-level, no /api prefix)

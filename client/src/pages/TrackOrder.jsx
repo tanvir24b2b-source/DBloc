@@ -71,6 +71,12 @@ export default function TrackOrder() {
                 ))}
               </div>
             )}
+            {o.trackingStatus && (
+              <div className="mt-3 rounded-lg bg-purple-50 border border-purple-200 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase text-purple-400">Delivery Update</p>
+                <p className="text-sm font-semibold text-purple-800">{o.trackingStatus}</p>
+              </div>
+            )}
           </div>
         );
       })}

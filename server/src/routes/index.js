@@ -11,6 +11,7 @@ import * as seo from "../controllers/seoController.js";
 import * as paymentGw from "../controllers/paymentGatewayController.js";
 import * as smsCtrl from "../controllers/smsController.js";
 import * as integrationCtrl from "../controllers/integrationController.js";
+import * as courierCtrl from "../controllers/courierController.js";
 import { protect, isAdmin, isMasterAdmin } from "../middleware/auth.js";
 import Order from "../models/Order.js";
 import Counter from "../models/Counter.js";
@@ -48,6 +49,7 @@ router.get("/orders/my", protect, wrap(order.myOrders));
 router.get("/orders/bloc/:blocId/recent", wrap(order.recentBlocOrders));
 router.get("/orders", adminGuard, wrap(order.allOrders));
 router.put("/orders/:id/status", adminGuard, wrap(order.updateOrderStatus));
+router.put("/orders/:id/edit", adminGuard, wrap(order.editOrder));
 
 // --- Bloc Requests ---
 router.post("/bloc-requests", protect, wrap(blocRequest.submitRequest));
@@ -81,6 +83,14 @@ router.post("/admin/payment-gateways", adminGuard, wrap(paymentGw.addGateway));
 router.get("/admin/sms", adminGuard, wrap(smsCtrl.getSettings));
 router.put("/admin/sms", adminGuard, wrap(smsCtrl.updateSettings));
 router.post("/admin/sms/test", adminGuard, wrap(smsCtrl.testSms));
+
+// --- Courier ---
+router.get("/courier-settings", wrap(courierCtrl.getPublicSettings));
+router.get("/admin/courier-settings", adminGuard, wrap(courierCtrl.getSettings));
+router.put("/admin/courier-settings", adminGuard, wrap(courierCtrl.updateSettings));
+router.post("/admin/orders/:id/ship", adminGuard, wrap(courierCtrl.shipOrder));
+router.put("/admin/orders/:id/note", adminGuard, wrap(courierCtrl.updateOrderNote));
+router.post("/admin/courier-sync", adminGuard, wrap(courierCtrl.syncCourierStatuses));
 
 // --- Integrations ---
 router.get("/admin/integrations", adminGuard, wrap(integrationCtrl.list));

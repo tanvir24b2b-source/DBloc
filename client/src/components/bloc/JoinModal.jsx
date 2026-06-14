@@ -12,11 +12,21 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
   const { user, setAuth } = useAuthStore();
 
   const [gateways, setGateways] = useState([]);
+  const [courierSettings, setCourierSettings] = useState(null);
+
   useEffect(() => {
     api.get("/payment-gateways").then(({ data }) => {
       setGateways(data.gateways);
       const def = data.gateways.find((g) => g.isDefault) || data.gateways[0];
       if (def) setForm((f) => ({ ...f, paymentMethod: def.type }));
+    }).catch(() => {});
+    api.get("/courier-settings").then(({ data }) => {
+      setCourierSettings(data);
+      // Set default delivery zone and charge
+      const isFree = data.freeDeliveryAll || bloc.shippingException;
+      const zone = isFree ? "free" : "inside_dhaka";
+      const charge = isFree ? 0 : (data.insideDhakaCharge || 0);
+      setForm((f) => ({ ...f, deliveryZone: zone, deliveryCharge: charge }));
     }).catch(() => {});
   }, []);
 
@@ -30,6 +40,8 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
     password: "",
     paymentMethod: "cod",
     transactionId: "",
+    deliveryZone: "inside_dhaka",
+    deliveryCharge: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -135,6 +147,37 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
             </div>
           )}
 
+          {/* Delivery Zone */}
+          {courierSettings && (
+            <div>
+              <label className="mb-1 block text-[11px] font-semibold uppercase text-muted">Delivery Zone</label>
+              <div className="space-y-2">
+                {(bloc.shippingException || courierSettings.freeDeliveryAll) ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-green-300 bg-green-50 px-3 py-2.5">
+                    <span className="text-sm font-semibold text-green-700">🎉 Free Delivery</span>
+                  </div>
+                ) : (
+                  <>
+                    {[
+                      { zone: "inside_dhaka", label: "Inside Dhaka", charge: courierSettings.insideDhakaCharge },
+                      { zone: "outside_dhaka", label: "Outside Dhaka", charge: courierSettings.outsideDhakaCharge },
+                    ].map(({ zone, label, charge }) => (
+                      <label key={zone} className={`flex items-center justify-between rounded-lg border px-3 py-2.5 cursor-pointer transition ${form.deliveryZone === zone ? "border-brand bg-orange-50" : "border-line bg-white hover:border-brand/40"}`}>
+                        <div className="flex items-center gap-3">
+                          <input type="radio" name="deliveryZone" value={zone} checked={form.deliveryZone === zone}
+                            onChange={() => setForm((f) => ({ ...f, deliveryZone: zone, deliveryCharge: charge }))}
+                            className="accent-brand" />
+                          <span className="text-sm font-medium text-ink">{label}</span>
+                        </div>
+                        <span className="text-sm font-bold text-brand">{currency}{formatPrice(charge)}</span>
+                      </label>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="mb-1 block text-[11px] font-semibold uppercase text-muted">Payment Method</label>
             <div className="space-y-2">
@@ -202,9 +245,19 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-lg bg-cream px-3 py-2 text-sm">
-            <span className="text-muted">Total</span>
-            <span className="font-bold text-ink">{currency}{formatPrice(bloc.blocPrice)}</span>
+          <div className="rounded-lg bg-cream px-3 py-2 text-sm space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Product</span>
+              <span className="text-ink">{currency}{formatPrice(bloc.blocPrice)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Delivery</span>
+              <span className="text-ink">{form.deliveryCharge > 0 ? `${currency}${formatPrice(form.deliveryCharge)}` : "Free"}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-line pt-1">
+              <span className="font-bold text-ink">Total</span>
+              <span className="font-bold text-ink">{currency}{formatPrice(bloc.blocPrice + form.deliveryCharge)}</span>
+            </div>
           </div>
 
           {error && <p className="text-sm text-danger">{error}</p>}

@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Bloc from "../models/Bloc.js";
 import Order from "../models/Order.js";
 import Subscriber from "../models/Subscriber.js";
+import BannedIP from "../models/BannedIP.js";
 
 const STAFF_ROLES = ["moderator", "subadmin", "admin", "master_admin"];
 
@@ -145,13 +146,23 @@ export async function listCustomers(req, res) {
 }
 
 export async function updateUser(req, res) {
-  const { banned, role } = req.body;
+  const { banned, role, bannedIp } = req.body;
   const update = {};
   if (banned !== undefined) update.banned = banned;
   // customers only — staff uses /admin/staff endpoints
   if (role && !STAFF_ROLES.includes(role)) update.role = role;
   const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!user) return res.status(404).json({ message: "User not found" });
+
+  // Also ban their IP if provided
+  if (banned && bannedIp) {
+    const bannedIPs = await BannedIP.getSingleton();
+    if (!bannedIPs.ips.includes(bannedIp)) {
+      bannedIPs.ips.push(bannedIp);
+      await bannedIPs.save();
+    }
+  }
+
   res.json(user);
 }
 

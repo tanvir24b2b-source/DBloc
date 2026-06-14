@@ -2,6 +2,7 @@ import xss from "xss";
 import Order from "../models/Order.js";
 import Bloc from "../models/Bloc.js";
 import User from "../models/User.js";
+import BannedIP from "../models/BannedIP.js";
 import { signAccessToken, signRefreshToken, cookieOptions } from "../utils/tokens.js";
 import { sendSms } from "../utils/sms.js";
 import { pushOrderToIntegrations } from "./integrationController.js";
@@ -10,7 +11,22 @@ const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, mobile: u
 
 // Place order — joins a bloc. Auto-registers new users if password provided.
 export async function placeOrder(req, res) {
-  const { blocId, mobile, email, password, quantity = 1, paymentMethod = "cod", transactionId = "" } = req.body;
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+
+  // Fraud block: check banned mobile + banned IP
+  const { mobile: reqMobile } = req.body;
+  if (reqMobile) {
+    const banned = await User.findOne({ mobile: reqMobile, banned: true });
+    if (banned) return res.status(403).json({ message: "Unable to place order. Please contact support." });
+  }
+  if (clientIp) {
+    const bannedIPs = await BannedIP.getSingleton();
+    if (bannedIPs.ips.includes(clientIp)) {
+      return res.status(403).json({ message: "Unable to place order. Please contact support." });
+    }
+  }
+
+  const { blocId, mobile, email, password, quantity = 1, paymentMethod = "cod", transactionId = "", deliveryZone = "inside_dhaka", deliveryCharge = 0 } = req.body;
   const customerName = req.body.customerName ? xss(req.body.customerName) : req.body.customerName;
   const address = req.body.address ? xss(req.body.address) : req.body.address;
 
@@ -70,7 +86,7 @@ export async function placeOrder(req, res) {
   const amount = bloc.blocPrice * qty;
   let order;
   try {
-    order = await Order.create({ user: user?._id, bloc: bloc._id, customerName, mobile, email, address, quantity: qty, amount, paymentMethod, transactionId });
+    order = await Order.create({ user: user?._id, bloc: bloc._id, customerName, mobile, email, address, quantity: qty, amount, paymentMethod, transactionId, deliveryZone, deliveryCharge: Number(deliveryCharge), clientIp });
   } catch (err) {
     // Order write failed — roll back the spot reservation
     await Bloc.findByIdAndUpdate(bloc._id, { $inc: { filledSpots: -qty } });
@@ -100,7 +116,7 @@ export async function trackOrder(req, res) {
   if (orderId) {
     const order = await Order.findOne({ orderId: orderId.toUpperCase() })
       .populate("bloc", "title image blocPrice")
-      .select("orderId customerName status paymentStatus amount quantity paymentMethod createdAt bloc");
+      .select("orderId customerName status paymentStatus amount quantity paymentMethod transactionId deliveryZone deliveryCharge discount trackingStatus createdAt bloc");
     if (!order) return res.status(404).json({ message: "No orders found" });
     return res.json([order]);
   }
@@ -140,6 +156,21 @@ export async function recentBlocOrders(req, res) {
     phone: mask(o.mobile),
     time: ago(o.createdAt),
   })));
+}
+
+// --- Admin: edit order details (allowed only before shipped) ---
+export async function editOrder(req, res) {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: "Order not found" });
+  if (["shipped", "delivered", "pending_return", "returned"].includes(order.status)) {
+    return res.status(400).json({ message: "Cannot edit order after it has been shipped" });
+  }
+  const allowed = ["customerName", "mobile", "email", "address", "deliveryZone", "deliveryCharge", "discount", "note", "courierName"];
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) order[key] = req.body[key];
+  }
+  await order.save();
+  res.json(order);
 }
 
 // --- Admin ---

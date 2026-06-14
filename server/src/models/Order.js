@@ -17,12 +17,23 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, default: "cod" },
     paymentStatus: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
     transactionId: { type: String, default: "" },
+    clientIp:      { type: String, default: "" },
 
     status: {
       type: String,
-      enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "pending_return", "returned"],
       default: "pending",
     },
+
+    deliveryZone:    { type: String, enum: ["inside_dhaka", "outside_dhaka", "free"], default: "inside_dhaka" },
+    deliveryCharge:  { type: Number, default: 0 },
+    discount:        { type: Number, default: 0 },
+    note:            { type: String, default: "" },
+
+    courierName:     { type: String, default: "" },
+    consignmentId:   { type: String, default: "" },
+    trackingStatus:  { type: String, default: "" },
+    lastCourierSync: { type: Date },
   },
   { timestamps: true }
 );
