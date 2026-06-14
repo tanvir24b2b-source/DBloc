@@ -43,12 +43,24 @@ orderSchema.index({ mobile: 1 });
 orderSchema.index({ user: 1 });
 
 orderSchema.pre("save", async function (next) {
-  if (!this.orderId) {
-    const last = await mongoose.model("Order").findOne({}, { orderId: 1 }).sort({ createdAt: -1 });
-    const lastNum = last?.orderId ? parseInt(last.orderId.replace("DB", ""), 10) : 0;
-    const nextNum = (isNaN(lastNum) ? 0 : lastNum) + 1;
-    this.orderId = "DB" + String(nextNum).padStart(4, "0");
-  }
+  if (this.orderId) return next();
+  // Find actual max orderId (alphabetical sort works because IDs are zero-padded equal length)
+  const maxDoc = await mongoose.model("Order")
+    .findOne({ orderId: { $exists: true, $ne: null } }, { orderId: 1 })
+    .sort({ orderId: -1 });
+  const maxNum = maxDoc?.orderId ? parseInt(maxDoc.orderId.replace("DB", ""), 10) : 0;
+  // Ensure counter is at least at maxNum, then atomically increment
+  await mongoose.model("Counter").updateOne(
+    { _id: "orderId", seq: { $lt: maxNum } },
+    { $set: { seq: maxNum } },
+    { upsert: true }
+  );
+  const counter = await mongoose.model("Counter").findOneAndUpdate(
+    { _id: "orderId" },
+    { $inc: { seq: 1 } },
+    { upsert: true, new: true }
+  );
+  this.orderId = "DB" + String(counter.seq).padStart(4, "0");
   next();
 });
 

@@ -14,13 +14,18 @@ export default function EndingSoon({ blocs }) {
     return !expired && h < 24;
   });
 
-  // Non-active blocs (expired/full) sorted by most recent
+  // Non-active blocs sorted by most recent — fills remaining slots
   const nonActive = blocs
     .filter((b) => b.status !== "active")
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const items = [...urgent, ...nonActive].slice(0, 8);
   const isUrgent = urgent.length > 0;
+
+  // Non-urgent active blocs (ending > 24h)
+  const nonUrgentActive = blocs.filter((b) => b.status === "active" && !urgent.includes(b));
+
+  // Urgent first → remaining active → expired fills to 8
+  const items = [...urgent, ...nonUrgentActive, ...nonActive].slice(0, 8);
 
   if (items.length === 0) return null;
 
