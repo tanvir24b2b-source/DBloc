@@ -11,7 +11,7 @@ export async function dashboard(req, res) {
     Bloc.countDocuments(),
     Order.countDocuments(),
     User.countDocuments({ role: "user" }),
-    Order.aggregate([{ $match: { paymentStatus: "paid" } }, { $group: { _id: null, sum: { $sum: "$amount" } } }]),
+    Order.aggregate([{ $match: { paymentStatus: "paid" } }, { $group: { _id: null, sum: { $sum: { $subtract: [{ $add: ["$amount", "$deliveryCharge"] }, "$discount"] } } } }]),
     Bloc.find(),
   ]);
 

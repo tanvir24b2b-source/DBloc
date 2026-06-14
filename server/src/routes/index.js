@@ -10,6 +10,7 @@ import * as blocRequest from "../controllers/blocRequestController.js";
 import * as seo from "../controllers/seoController.js";
 import * as paymentGw from "../controllers/paymentGatewayController.js";
 import * as smsCtrl from "../controllers/smsController.js";
+import * as emailCtrl from "../controllers/emailController.js";
 import * as integrationCtrl from "../controllers/integrationController.js";
 import * as courierCtrl from "../controllers/courierController.js";
 import { protect, isAdmin, isMasterAdmin } from "../middleware/auth.js";
@@ -83,6 +84,11 @@ router.post("/admin/payment-gateways", adminGuard, wrap(paymentGw.addGateway));
 router.get("/admin/sms", adminGuard, wrap(smsCtrl.getSettings));
 router.put("/admin/sms", adminGuard, wrap(smsCtrl.updateSettings));
 router.post("/admin/sms/test", adminGuard, wrap(smsCtrl.testSms));
+
+// --- Email ---
+router.get("/admin/email", adminGuard, wrap(emailCtrl.getSettings));
+router.put("/admin/email", adminGuard, wrap(emailCtrl.updateSettings));
+router.post("/admin/email/test", adminGuard, wrap(emailCtrl.testEmail));
 
 // --- Courier ---
 router.get("/courier-settings", wrap(courierCtrl.getPublicSettings));

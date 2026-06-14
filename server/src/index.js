@@ -56,9 +56,18 @@ const resetLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+// Guards the public order-tracking endpoint against sequential orderId enumeration
+const trackLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15,
+  message: { message: "Too many tracking requests. Please wait a moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", resetLimiter);
+app.get("/api/orders/track", trackLimiter);
 app.post("/api/orders", orderLimiter);
 
 app.use("/uploads", express.static(new URL("../public/images", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")));

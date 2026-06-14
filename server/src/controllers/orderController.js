@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import BannedIP from "../models/BannedIP.js";
 import { signAccessToken, signRefreshToken, cookieOptions } from "../utils/tokens.js";
 import { sendSms } from "../utils/sms.js";
+import { sendEmail } from "../utils/email.js";
 import { pushOrderToIntegrations } from "./integrationController.js";
 
 const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [] });
@@ -96,11 +97,17 @@ export async function placeOrder(req, res) {
   // Push to CRM integrations (EcomDrive, Bismation, etc.)
   pushOrderToIntegrations(order, bloc);
 
-  // SMS: order confirmed
+  // SMS + Email: order confirmed
   sendSms(mobile, "orderConfirmed", {
     name: customerName,
     orderId: order.orderId || order._id,
     amount: `৳${amount}`,
+  });
+  if (email) sendEmail(email, "orderConfirmed", {
+    name: customerName,
+    orderId: order.orderId || order._id,
+    amount: `৳${amount}`,
+    subject: "Order Confirmed — D BLOC",
   });
 
   res.status(201).json({ order, accessToken, user: user ? publicUser(user) : null });
@@ -185,9 +192,9 @@ export async function allOrders(req, res) {
   res.json({ orders, total, page, pages: Math.ceil(total / limit) });
 }
 
-const STATUS_SMS = {
-  shipped:   "orderShipped",
-  delivered: "orderDelivered",
+const STATUS_NOTIFY = {
+  shipped:   { key: "orderShipped",   subject: "Your Order Has Been Shipped — D BLOC" },
+  delivered: { key: "orderDelivered", subject: "Your Order Has Been Delivered — D BLOC" },
 };
 
 export async function updateOrderStatus(req, res) {
@@ -198,12 +205,12 @@ export async function updateOrderStatus(req, res) {
   const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!order) return res.status(404).json({ message: "Order not found" });
 
-  // SMS notification on status change
-  if (status && STATUS_SMS[status] && order.mobile) {
-    sendSms(order.mobile, STATUS_SMS[status], {
-      name: order.customerName,
-      orderId: order.orderId || order._id,
-    });
+  // SMS + Email notification on status change
+  const notify = status && STATUS_NOTIFY[status];
+  if (notify) {
+    const vars = { name: order.customerName, orderId: order.orderId || order._id };
+    if (order.mobile) sendSms(order.mobile, notify.key, vars);
+    if (order.email)  sendEmail(order.email, notify.key, { ...vars, subject: notify.subject });
   }
 
   res.json(order);

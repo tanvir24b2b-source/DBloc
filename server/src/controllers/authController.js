@@ -4,7 +4,7 @@ import User from "../models/User.js";
 import { signAccessToken, signRefreshToken, cookieOptions } from "../utils/tokens.js";
 
 function publicUser(u) {
-  return { _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [], lastLoginAt: u.lastLoginAt, lastLoginIP: u.lastLoginIP };
+  return { _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [], lastLoginAt: u.lastLoginAt };
 }
 
 export async function register(req, res) {

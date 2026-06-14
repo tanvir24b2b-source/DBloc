@@ -276,6 +276,7 @@ export default function AdminLayout() {
     location.pathname.startsWith("/admin/payment-gateways") ||
     location.pathname.startsWith("/admin/couriers") ||
     location.pathname.startsWith("/admin/sms") ||
+    location.pathname.startsWith("/admin/email") ||
     location.pathname.startsWith("/admin/integrations")
   );
 
@@ -357,6 +358,7 @@ export default function AdminLayout() {
                 <NavLink to="/admin/payment-gateways" className={navCls}>💳 Payments</NavLink>
                 <NavLink to="/admin/couriers" className={navCls}>🚚 Couriers</NavLink>
                 <NavLink to="/admin/sms" className={navCls}>📱 SMS</NavLink>
+                <NavLink to="/admin/email" className={navCls}>✉️ Email</NavLink>
                 <NavLink to="/admin/integrations" className={navCls}>🔗 Integrations</NavLink>
                 {isMaster && (
                   <NavLink to="/admin/staff" className={navCls}>Users &amp; Permissions</NavLink>

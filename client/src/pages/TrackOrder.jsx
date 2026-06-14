@@ -4,7 +4,7 @@ import api from "../lib/api.js";
 import { formatPrice } from "../lib/format.js";
 import EditableText from "../components/common/EditableText.jsx";
 
-const statusSteps = ["pending", "confirmed", "shipped", "delivered"];
+const statusSteps = ["pending", "confirmed", "processing", "shipped", "delivered"];
 
 export default function TrackOrder() {
   const placeholder = useText("track.placeholder", "Order ID or Mobile");
@@ -54,7 +54,7 @@ export default function TrackOrder() {
                 <p className="font-bold text-ink">{o.bloc?.title}</p>
                 <p className="text-xs text-muted">Order {o.orderId}</p>
               </div>
-              <p className="font-bold text-brand">{currency}{formatPrice(o.amount)}</p>
+              <p className="font-bold text-brand">{currency}{formatPrice(o.amount + (o.deliveryCharge || 0))}</p>
             </div>
 
             {o.status === "cancelled" ? (

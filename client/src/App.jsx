@@ -33,6 +33,7 @@ import SiteSettings from "./pages/admin/SiteSettings.jsx";
 import ManageSEO from "./pages/admin/ManageSEO.jsx";
 import ManagePaymentGateways from "./pages/admin/ManagePaymentGateways.jsx";
 import ManageSms from "./pages/admin/ManageSms.jsx";
+import ManageEmail from "./pages/admin/ManageEmail.jsx";
 import ManageIntegrations from "./pages/admin/ManageIntegrations.jsx";
 import ManageCouriers from "./pages/admin/ManageCouriers.jsx";
 
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="payment-gateways" element={<ManagePaymentGateways />} />
         <Route path="couriers" element={<ManageCouriers />} />
         <Route path="sms" element={<ManageSms />} />
+        <Route path="email" element={<ManageEmail />} />
         <Route path="integrations" element={<ManageIntegrations />} />
       </Route>
     </Routes>

@@ -141,7 +141,7 @@ async function pathaoCreateConsignment(settings, order) {
     },
     { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
   );
-  return data?.data?.consignment_id || "";
+  return data?.data?.consignment_id || data?.consignment_id || "";
 }
 
 // ── Map courier status → our status ───────────────────────────────────────
