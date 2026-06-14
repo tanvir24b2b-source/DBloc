@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../lib/api.js";
 
 const CREDENTIAL_FIELDS = {
@@ -28,8 +28,10 @@ const INP = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-
 function GatewayCard({ gw, onSaved }) {
   const [open, setOpen] = useState(false);
   const [creds, setCreds] = useState(gw.credentials || {});
+  const [name, setName] = useState(gw.displayName);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const fileRef = useRef();
 
   const fields = CREDENTIAL_FIELDS[gw.type] || [];
 
@@ -41,11 +43,11 @@ function GatewayCard({ gw, onSaved }) {
     } finally { setBusy(false); }
   }
 
-  async function saveCredentials(e) {
+  async function saveSettings(e) {
     e.preventDefault();
     setBusy(true); setMsg("");
     try {
-      const { data } = await api.put(`/admin/payment-gateways/${gw._id}`, { credentials: creds });
+      const { data } = await api.put(`/admin/payment-gateways/${gw._id}`, { displayName: name, credentials: creds });
       onSaved(data.gateway);
       setMsg("✓ Saved");
       setTimeout(() => setMsg(""), 2000);
@@ -54,12 +56,28 @@ function GatewayCard({ gw, onSaved }) {
     } finally { setBusy(false); }
   }
 
+  function handleLogo(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => setCreds((c) => ({ ...c, logo: ev.target.result }));
+    reader.readAsDataURL(file);
+  }
+
+  const logo = creds.logo || gw.credentials?.logo;
   const ICONS = { sslcommerz: "💳", bkash: "🟣", bkashmanual: "💜", nagad: "🟠", cod: "💵" };
 
   return (
     <div className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${gw.enabled ? "border-brand/30" : "border-gray-200"}`}>
       <div className="flex items-center gap-4 px-5 py-4">
-        <span className="text-2xl">{ICONS[gw.type] || "💳"}</span>
+        {/* Logo / icon */}
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center">
+          {logo
+            ? <img src={logo} alt={name} className="h-full w-full object-contain p-1" />
+            : <span className="text-2xl">{ICONS[gw.type] || "💳"}</span>
+          }
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900">{gw.displayName}</p>
           <div className="flex gap-2 mt-1 flex-wrap">
@@ -72,7 +90,6 @@ function GatewayCard({ gw, onSaved }) {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* Enable toggle */}
           <button
             disabled={busy || gw.isDefault}
             onClick={() => toggle("enabled", !gw.enabled)}
@@ -81,43 +98,75 @@ function GatewayCard({ gw, onSaved }) {
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${gw.enabled ? "translate-x-6" : "translate-x-1"}`} />
           </button>
-          {/* Set default */}
           {!gw.isDefault && gw.enabled && (
-            <button
-              disabled={busy}
-              onClick={() => toggle("isDefault", true)}
-              className="text-xs text-gray-500 hover:text-brand font-semibold border border-gray-200 rounded-lg px-2 py-1 transition"
-            >
+            <button disabled={busy} onClick={() => toggle("isDefault", true)}
+              className="text-xs text-gray-500 hover:text-brand font-semibold border border-gray-200 rounded-lg px-2 py-1 transition">
               Set Default
             </button>
           )}
-          {/* Credentials expand */}
-          {fields.length > 0 && (
-            <button onClick={() => setOpen((o) => !o)} className="text-xs text-brand hover:underline font-semibold">
-              {open ? "Hide" : "Credentials"}
-            </button>
-          )}
+          <button onClick={() => setOpen((o) => !o)} className="text-xs text-brand hover:underline font-semibold">
+            {open ? "Hide" : "Settings"}
+          </button>
         </div>
       </div>
 
-      {open && fields.length > 0 && (
-        <form onSubmit={saveCredentials} className="border-t border-gray-100 bg-orange-50 px-5 py-4 space-y-3">
-          <p className="text-xs font-bold text-gray-700">{gw.type === "bkashmanual" ? "Payment Settings" : "API Credentials"}</p>
-          {fields.map(({ key, label, placeholder, type: ftype }) => (
-            <div key={key}>
-              <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>
-              <input
-                type={ftype || "password"}
-                placeholder={placeholder || `Enter ${label}`}
-                value={creds[key] || ""}
-                onChange={(e) => setCreds((c) => ({ ...c, [key]: e.target.value }))}
-                className={INP}
-              />
+      {open && (
+        <form onSubmit={saveSettings} className="border-t border-gray-100 bg-orange-50 px-5 py-4 space-y-3">
+          {/* Display name */}
+          <div>
+            <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Display Name (shown to customers)</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+              className={INP} placeholder="e.g. bKash Personal" />
+          </div>
+
+          {/* Logo upload */}
+          <div>
+            <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Logo — recommended 48 × 48 px square PNG</label>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center">
+                {logo
+                  ? <img src={logo} alt="logo" className="h-full w-full object-contain p-1" />
+                  : <span className="text-xs text-gray-400">Logo</span>
+                }
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-brand hover:text-brand">
+                  Upload Logo
+                </button>
+                {logo && (
+                  <button type="button" onClick={() => setCreds((c) => ({ ...c, logo: "" }))}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-500 hover:border-red-300">
+                    Remove
+                  </button>
+                )}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
             </div>
-          ))}
+          </div>
+
+          {/* Credential fields (API keys, number, etc.) */}
+          {fields.length > 0 && (
+            <div className="space-y-3 border-t border-gray-200 pt-3">
+              <p className="text-[10px] font-bold uppercase text-gray-400">{gw.type === "bkashmanual" ? "Payment Details" : "API Credentials"}</p>
+              {fields.map(({ key, label, placeholder, type: ftype }) => (
+                <div key={key}>
+                  <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>
+                  <input
+                    type={ftype || "password"}
+                    placeholder={placeholder || `Enter ${label}`}
+                    value={creds[key] || ""}
+                    onChange={(e) => setCreds((c) => ({ ...c, [key]: e.target.value }))}
+                    className={INP}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
           {msg && <p className={`text-xs ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
           <button type="submit" disabled={busy} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            {busy ? "Saving..." : "Save Credentials"}
+            {busy ? "Saving..." : "Save"}
           </button>
         </form>
       )}

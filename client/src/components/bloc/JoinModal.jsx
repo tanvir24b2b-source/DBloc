@@ -36,6 +36,12 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
 
   const selectedGateway = gateways.find((g) => g.type === form.paymentMethod);
   const isManual = selectedGateway?.type === "bkashmanual";
+  const [copied, setCopied] = useState(false);
+  function copyNumber() {
+    navigator.clipboard.writeText(selectedGateway?.manualNumber || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -135,6 +141,9 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
               {gateways.map((gw) => (
                 <label key={gw.type} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition ${form.paymentMethod === gw.type ? "border-brand bg-orange-50" : "border-line bg-white hover:border-brand/40"}`}>
                   <input type="radio" name="paymentMethod" value={gw.type} checked={form.paymentMethod === gw.type} onChange={set("paymentMethod")} className="accent-brand" />
+                  {gw.logo
+                    ? <img src={gw.logo} alt={gw.displayName} className="h-6 w-6 object-contain rounded" />
+                    : null}
                   <span className="text-sm font-medium text-ink">{gw.displayName}</span>
                   {gw.isDefault && <span className="ml-auto text-[10px] font-bold text-brand uppercase">Default</span>}
                 </label>
@@ -149,36 +158,46 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
 
           {/* Manual bKash payment instructions */}
           {isManual && (
-            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 space-y-3">
-              <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">💜 bKash Manual Payment</p>
+            <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "#f9c0d9", background: "#fff5fa" }}>
+              <div className="flex items-center gap-2">
+                {selectedGateway.logo
+                  ? <img src={selectedGateway.logo} alt="bKash" className="h-6 w-6 object-contain" />
+                  : <span className="text-lg">💜</span>}
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#E2136E" }}>
+                  {selectedGateway.displayName} Payment
+                </p>
+              </div>
               {selectedGateway.manualInstructions && (
-                <p className="text-xs text-purple-800">{selectedGateway.manualInstructions}</p>
+                <p className="text-xs" style={{ color: "#a01050" }}>{selectedGateway.manualInstructions}</p>
               )}
               {selectedGateway.manualNumber && (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 rounded-lg bg-white border border-purple-200 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase text-purple-400 mb-0.5">Send To</p>
-                    <p className="text-base font-extrabold text-purple-700 tracking-wider">{selectedGateway.manualNumber}</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 rounded-lg bg-white px-3 py-2" style={{ border: "1px solid #f9c0d9" }}>
+                    <p className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: "#E2136E" }}>Send To</p>
+                    <p className="text-base font-extrabold tracking-wider" style={{ color: "#E2136E" }}>{selectedGateway.manualNumber}</p>
                   </div>
-                  <a
-                    href={`bkash://send?number=${selectedGateway.manualNumber}&amount=${bloc.blocPrice}`}
-                    className="shrink-0 rounded-xl bg-purple-600 px-4 py-3 text-center text-xs font-bold text-white hover:bg-purple-700 active:scale-95 transition"
+                  <button
+                    type="button"
+                    onClick={copyNumber}
+                    className="shrink-0 rounded-xl px-4 py-3 text-center text-xs font-bold text-white transition active:scale-95"
+                    style={{ background: copied ? "#22c55e" : "#E2136E" }}
                   >
-                    Open<br />bKash App
-                  </a>
+                    {copied ? "Copied!" : "Copy\nNumber"}
+                  </button>
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase text-purple-600">Transaction ID (TrxID)</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase" style={{ color: "#E2136E" }}>Transaction ID (TrxID)</label>
                 <input
                   type="text"
                   required
                   value={form.transactionId}
                   onChange={(e) => setForm((f) => ({ ...f, transactionId: e.target.value.trim() }))}
                   placeholder="e.g. 8N6A3XYZ12"
-                  className="w-full rounded-lg border border-purple-300 px-3 py-2 text-sm outline-none focus:border-purple-500 bg-white font-mono"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-white font-mono"
+                  style={{ border: "1px solid #f9c0d9" }}
                 />
-                <p className="mt-1 text-[10px] text-purple-500">Find TrxID in bKash app → Send Money → Transaction History</p>
+                <p className="mt-1 text-[10px]" style={{ color: "#E2136E" }}>Find TrxID in bKash app → Send Money → Transaction History</p>
               </div>
             </div>
           )}

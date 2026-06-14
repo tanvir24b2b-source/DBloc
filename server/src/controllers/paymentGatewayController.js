@@ -26,6 +26,7 @@ export async function listPublic(req, res) {
     gateways: gateways.map((gw) => {
       const base = { _id: gw._id, type: gw.type, displayName: gw.displayName, isDefault: gw.isDefault, sortOrder: gw.sortOrder };
       // Expose number+instructions for manual gateways so checkout can display them
+      if (gw.credentials?.logo) base.logo = gw.credentials.logo;
       if (gw.type === "bkashmanual" || gw.credentials?.isManual) {
         base.manualNumber = gw.credentials?.number || "";
         base.manualInstructions = gw.credentials?.instructions || "";
