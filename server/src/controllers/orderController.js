@@ -11,7 +11,7 @@ const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, mobile: u
 
 // Place order — joins a bloc. Auto-registers new users if password provided.
 export async function placeOrder(req, res) {
-  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "";
+  const clientIp = req.ip || "";
 
   // Fraud block: check banned mobile + banned IP
   const { mobile: reqMobile } = req.body;
@@ -116,7 +116,7 @@ export async function trackOrder(req, res) {
   if (orderId) {
     const order = await Order.findOne({ orderId: orderId.toUpperCase() })
       .populate("bloc", "title image blocPrice")
-      .select("orderId customerName status paymentStatus amount quantity paymentMethod transactionId deliveryZone deliveryCharge discount trackingStatus createdAt bloc");
+      .select("orderId customerName status paymentStatus amount quantity paymentMethod deliveryZone deliveryCharge discount trackingStatus createdAt bloc");
     if (!order) return res.status(404).json({ message: "No orders found" });
     return res.json([order]);
   }

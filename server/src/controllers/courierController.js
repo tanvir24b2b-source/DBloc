@@ -1,11 +1,23 @@
 import axios from "axios";
+import xss from "xss";
 import CourierSettings from "../models/CourierSettings.js";
 import Order from "../models/Order.js";
 
-// GET /api/admin/courier-settings
+// GET /api/admin/courier-settings — masks secrets so they never leave the server in plaintext
 export async function getSettings(req, res) {
-  const settings = await CourierSettings.getSingleton();
-  res.json(settings);
+  const s = await CourierSettings.getSingleton();
+  res.json({
+    insideDhakaCharge:  s.insideDhakaCharge,
+    outsideDhakaCharge: s.outsideDhakaCharge,
+    freeDeliveryAll:    s.freeDeliveryAll,
+    defaultCourier:     s.defaultCourier,
+    steadfastEnabled:   s.steadfastEnabled,
+    steadfastApiKey:    s.steadfastApiKey    ? "••••••" : "",
+    steadfastSecretKey: s.steadfastSecretKey ? "••••••" : "",
+    pathaoEnabled:      s.pathaoEnabled,
+    pathaoApiKey:       s.pathaoApiKey    ? "••••••" : "",
+    pathaoSecretKey:    s.pathaoSecretKey ? "••••••" : "",
+  });
 }
 
 // GET /api/courier-settings  (public — only delivery charges, no API keys)
@@ -26,12 +38,15 @@ export async function updateSettings(req, res) {
     "steadfastApiKey", "steadfastSecretKey", "steadfastEnabled",
     "pathaoApiKey", "pathaoSecretKey", "pathaoEnabled",
   ];
+  const SECRET_KEYS = ["steadfastApiKey", "steadfastSecretKey", "pathaoApiKey", "pathaoSecretKey"];
   const settings = await CourierSettings.getSingleton();
   for (const key of allowed) {
-    if (req.body[key] !== undefined) settings[key] = req.body[key];
+    if (req.body[key] === undefined) continue;
+    if (SECRET_KEYS.includes(key) && req.body[key] === "••••••") continue; // ignore masked placeholder
+    settings[key] = req.body[key];
   }
   await settings.save();
-  res.json(settings);
+  res.json({ ok: true });
 }
 
 // ── Steadfast API helpers ──────────────────────────────────────────────────
@@ -187,7 +202,7 @@ export async function updateOrderNote(req, res) {
   const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ message: "Order not found" });
 
-  order.note = req.body.note || "";
+  order.note = xss(req.body.note || "");
   await order.save();
 
   // Sync note to courier if shipped
