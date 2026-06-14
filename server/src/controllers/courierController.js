@@ -238,15 +238,16 @@ async function runSync() {
       if (order.courierName === "steadfast" && settings.steadfastEnabled) {
         rawStatus = await steadfastGetStatus(settings, order.consignmentId);
       }
+      const safeStatus = xss(rawStatus).slice(0, 200);
       const newStatus = mapCourierStatus(rawStatus);
       if (newStatus && newStatus !== order.status) {
         order.status         = newStatus;
-        order.trackingStatus = rawStatus;
+        order.trackingStatus = safeStatus;
         order.lastCourierSync = new Date();
         await order.save();
         updated++;
       } else if (rawStatus) {
-        order.trackingStatus  = rawStatus;
+        order.trackingStatus  = safeStatus;
         order.lastCourierSync = new Date();
         await order.save();
       }

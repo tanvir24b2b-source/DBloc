@@ -3,7 +3,9 @@ import { sendSms } from "../utils/sms.js";
 
 export async function getSettings(req, res) {
   const s = await SmsSettings.findById("sms") || await SmsSettings.create({ _id: "sms" });
-  res.json({ settings: s });
+  const obj = s.toObject();
+  if (obj.apiKey) obj.apiKey = "••••••";
+  res.json({ settings: obj });
 }
 
 export async function updateSettings(req, res) {
@@ -11,10 +13,14 @@ export async function updateSettings(req, res) {
     "apiKeyField", "senderField", "numberField", "messageField", "templates"];
   const update = {};
   for (const key of allowed) {
-    if (req.body[key] !== undefined) update[key] = req.body[key];
+    if (req.body[key] === undefined) continue;
+    if (key === "apiKey" && req.body[key] === "••••••") continue;
+    update[key] = req.body[key];
   }
   const s = await SmsSettings.findByIdAndUpdate("sms", { $set: update }, { new: true, upsert: true });
-  res.json({ settings: s });
+  const obj = s.toObject();
+  if (obj.apiKey) obj.apiKey = "••••••";
+  res.json({ settings: obj });
 }
 
 export async function testSms(req, res) {

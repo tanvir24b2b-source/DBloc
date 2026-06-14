@@ -174,7 +174,14 @@ export async function editOrder(req, res) {
   }
   const allowed = ["customerName", "mobile", "email", "address", "deliveryZone", "deliveryCharge", "discount", "note", "courierName"];
   for (const key of allowed) {
-    if (req.body[key] !== undefined) order[key] = req.body[key];
+    if (req.body[key] === undefined) continue;
+    if (key === "deliveryCharge" || key === "discount") {
+      const n = Number(req.body[key]);
+      if (isNaN(n) || n < 0) continue; // reject negative or non-numeric
+      order[key] = n;
+    } else {
+      order[key] = req.body[key];
+    }
   }
   await order.save();
   res.json(order);
