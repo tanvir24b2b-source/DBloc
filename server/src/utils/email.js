@@ -8,6 +8,23 @@ function fillTemplate(template, vars) {
   );
 }
 
+let _transporter = null;
+let _transporterKey = null;
+
+function getTransporter(settings) {
+  const key = `${settings.host}:${settings.port}:${settings.user}`;
+  if (!_transporter || _transporterKey !== key) {
+    _transporter = nodemailer.createTransport({
+      host: settings.host,
+      port: settings.port || 465,
+      secure: settings.secure !== false,
+      auth: { user: settings.user, pass: settings.pass },
+    });
+    _transporterKey = key;
+  }
+  return _transporter;
+}
+
 export async function sendEmail(to, templateKey, vars = {}) {
   const settings = await EmailSettings.findById("email");
   if (!settings?.enabled || !settings.host || !settings.user || !settings.pass) return;
@@ -16,13 +33,7 @@ export async function sendEmail(to, templateKey, vars = {}) {
   if (!template) return;
 
   const text = fillTemplate(template, vars);
-
-  const transporter = nodemailer.createTransport({
-    host: settings.host,
-    port: settings.port || 465,
-    secure: settings.secure !== false,
-    auth: { user: settings.user, pass: settings.pass },
-  });
+  const transporter = getTransporter(settings);
 
   try {
     await transporter.sendMail({

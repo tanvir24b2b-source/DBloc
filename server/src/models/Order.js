@@ -51,26 +51,22 @@ orderSchema.index({ user: 1 });
 
 orderSchema.pre("save", async function (next) {
   if (this.orderId) return next();
-  // Find actual max orderId (alphabetical sort works because IDs are zero-padded equal length)
-  const maxDoc = await mongoose.model("Order")
-    .findOne({ orderId: { $exists: true, $ne: null } }, { orderId: 1 })
-    .sort({ orderId: -1 });
-  const parsed = maxDoc?.orderId ? parseInt(maxDoc.orderId.replace(/\D/g, ""), 10) : 0;
-  const maxNum = isNaN(parsed) ? 0 : parsed;
-  // Ensure counter is at least at maxNum, then atomically increment
-  if (maxNum > 0) {
-    await mongoose.model("Counter").updateOne(
-      { _id: "orderId", seq: { $lt: maxNum } },
-      { $set: { seq: maxNum } },
-      { upsert: true }
+  // Atomically increment the counter. On unique-key collision (race), retry up to 5 times.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const counter = await mongoose.model("Counter").findOneAndUpdate(
+      { _id: "orderId" },
+      { $inc: { seq: 1 } },
+      { upsert: true, new: true }
     );
+    const candidate = "DB" + String(counter.seq).padStart(4, "0");
+    const exists = await mongoose.model("Order").exists({ orderId: candidate });
+    if (!exists) {
+      this.orderId = candidate;
+      return next();
+    }
   }
-  const counter = await mongoose.model("Counter").findOneAndUpdate(
-    { _id: "orderId" },
-    { $inc: { seq: 1 } },
-    { upsert: true, new: true }
-  );
-  this.orderId = "DB" + String(counter.seq).padStart(4, "0");
+  // Fallback: use timestamp-based ID if all retries collide
+  this.orderId = "DB" + Date.now().toString(36).toUpperCase();
   next();
 });
 

@@ -27,6 +27,8 @@ export async function sendSms(to, templateKey, vars = {}) {
   });
 
   try {
+    // NOTE: BD SMS providers (e.g. BulkSMSBD, Mimsms) require GET with API key in query string.
+    // This is a provider limitation — rotate the API key periodically to reduce exposure risk.
     const url = `${settings.apiUrl.replace(/\/$/, "")}?${params.toString()}`;
     await fetch(url);
   } catch (err) {

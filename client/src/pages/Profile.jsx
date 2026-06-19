@@ -20,7 +20,7 @@ function fmt(dateStr) {
 }
 
 export default function Profile() {
-  const { user, logout, setAuth } = useAuthStore();
+  const { user, loading, logout, setAuth } = useAuthStore();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState("orders");
@@ -28,21 +28,22 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null); // { type: "ok"|"err", text }
 
-  // Redirect if not logged in
+  // Redirect if not logged in (wait for auth to finish loading first)
   useEffect(() => {
-    if (user === null) navigate("/login");
-  }, [user, navigate]);
+    if (!loading && !user) navigate("/login");
+  }, [user, loading, navigate]);
 
   // Populate form from user
   useEffect(() => {
     if (user) setForm(f => ({ ...f, name: user.name || "", email: user.email || "", mobile: user.mobile || "", address: user.address || "" }));
   }, [user]);
 
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ["my-orders"],
-    queryFn: () => api.get("/orders/my").then(r => r.data),
+    queryFn: () => api.get("/orders/my").then(r => Array.isArray(r.data) ? r.data : (r.data.orders ?? [])),
     enabled: !!user,
   });
+  const orders = Array.isArray(ordersData) ? ordersData : (ordersData?.orders ?? []);
 
   async function saveProfile(e) {
     e.preventDefault();
@@ -65,7 +66,7 @@ export default function Profile() {
     }
   }
 
-  if (!user) return null;
+  if (loading || !user) return null;
 
   const latest = orders[0];
 

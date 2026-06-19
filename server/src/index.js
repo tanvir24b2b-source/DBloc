@@ -17,13 +17,31 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   console.error("✗ JWT_SECRET and JWT_REFRESH_SECRET must be set in .env. Refusing to start.");
   process.exit(1);
 }
+if (process.env.NODE_ENV === "production" && (!process.env.CLIENT_URL || process.env.CLIENT_URL === "*")) {
+  console.error("✗ CLIENT_URL must be set to a specific origin in production. Refusing to start.");
+  process.exit(1);
+}
 
 const app = express();
 
 // Trust the first proxy hop (Render's load balancer) so req.ip is the real client IP
 app.set("trust proxy", 1);
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc:    ["'self'", "https:"],
+      objectSrc:  ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -71,23 +89,26 @@ const trackLimiter = rateLimit({
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", resetLimiter);
+app.use("/api/auth/reset-password", resetLimiter);
 app.get("/api/orders/track", trackLimiter);
 app.post("/api/orders", orderLimiter);
 
 app.use("/uploads", express.static(new URL("../public/images", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")));
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "D BLOC API" }));
 
-// Fire courier sync on server wake (non-blocking, 1-hour cooldown enforced inside)
-app.use("/api", (req, res, next) => {
-  syncCourierStatuses(null, null).catch(() => {});
-  next();
-});
-
 app.use("/api", routes);
 
 // robots.txt and MCP server (top-level, no /api prefix)
+const mcpLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { message: "Too many MCP requests." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.get("/robots.txt", (req, res, next) => getRobots(req, res, next).catch(next));
-app.post("/mcp", (req, res, next) => mcpHandler(req, res, next).catch(next));
+app.post("/mcp", mcpLimiter, (req, res, next) => mcpHandler(req, res, next).catch(next));
 
 app.use(notFound);
 app.use(errorHandler);
@@ -99,7 +120,7 @@ connectDB()
   .then(() => seedGateways())
   .then(() => {
     app.listen(PORT, () => console.log(`✓ D BLOC API running on http://localhost:${PORT}`));
+    // Sync courier statuses once on startup, then every hour (cooldown also enforced inside)
+    syncCourierStatuses(null, null).catch(() => {});
+    setInterval(() => syncCourierStatuses(null, null).catch(() => {}), 60 * 60 * 1000);
   });
- 
- 
- 

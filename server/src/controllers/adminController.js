@@ -7,15 +7,18 @@ import BannedIP from "../models/BannedIP.js";
 const STAFF_ROLES = ["moderator", "subadmin", "admin", "master_admin"];
 
 export async function dashboard(req, res) {
-  const [totalBlocs, totalOrders, totalUsers, revenueAgg, blocs] = await Promise.all([
+  const now = new Date();
+  const [activeBlocs, totalBlocs, totalOrders, totalUsers, revenueAgg] = await Promise.all([
+    Bloc.countDocuments({
+      hidden: { $ne: true },
+      endTime: { $gt: now },
+      $expr: { $lt: ["$filledSpots", "$maxSpots"] },
+    }),
     Bloc.countDocuments(),
     Order.countDocuments(),
     User.countDocuments({ role: "user" }),
     Order.aggregate([{ $match: { paymentStatus: "paid" } }, { $group: { _id: null, sum: { $sum: { $subtract: [{ $add: ["$amount", "$deliveryCharge"] }, "$discount"] } } } }]),
-    Bloc.find(),
   ]);
-
-  const activeBlocs = blocs.filter((b) => b.status === "active").length;
   const revenue = revenueAgg[0]?.sum || 0;
 
   res.json({ totalBlocs, activeBlocs, totalOrders, totalUsers, revenue });
@@ -38,7 +41,11 @@ export async function analytics(req, res) {
   } else if (range === "month") {
     start = startOfDay(new Date(now.getTime() - 29 * 864e5)); end = now;
   } else if (range === "custom" && from) {
-    start = startOfDay(new Date(from));
+    const startDate = new Date(from);
+    if (isNaN(startDate.getTime())) {
+      return res.status(400).json({ message: "Invalid 'from' date" });
+    }
+    start = startOfDay(startDate);
     end = to ? endOfDay(new Date(to)) : endOfDay(new Date(from));
   } else { // today (default)
     start = startOfDay(now); end = now;
@@ -79,8 +86,11 @@ export async function analytics(req, res) {
   }
   const volumeSeries = Object.entries(dayMap).sort().map(([date, count]) => ({ date, count }));
 
-  const blocs = await Bloc.find();
-  const activeBlocs = blocs.filter((b) => b.status === "active").length;
+  const activeBlocs = await Bloc.countDocuments({
+    hidden: { $ne: true },
+    endTime: { $gt: now },
+    $expr: { $lt: ["$filledSpots", "$maxSpots"] },
+  });
   const peak = byHour.reduce((m, c) => (c.count > m.count ? c : m), { hour: 0, count: 0 });
 
   res.json({
@@ -91,7 +101,14 @@ export async function analytics(req, res) {
 }
 
 export async function listUsers(req, res) {
-  res.json(await User.find({ role: "user" }).sort({ createdAt: -1 }));
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 50);
+  const skip = (page - 1) * limit;
+  const [users, total] = await Promise.all([
+    User.find({ role: "user" }).sort({ createdAt: -1 }).skip(skip).limit(limit).select("-password -tokenVersion"),
+    User.countDocuments({ role: "user" }),
+  ]);
+  res.json({ users, total, page, pages: Math.ceil(total / limit) });
 }
 
 export async function listCustomers(req, res) {
@@ -145,8 +162,18 @@ export async function listCustomers(req, res) {
   res.json({ customers, summary: { totalCustomers, newToday, totalRevenue } });
 }
 
+const ROLE_RANK = { user: 0, moderator: 1, subadmin: 2, admin: 3, master_admin: 4 };
+
 export async function updateUser(req, res) {
   const { banned, role, bannedIp } = req.body;
+  const target = await User.findById(req.params.id);
+  if (!target) return res.status(404).json({ message: "User not found" });
+  // Prevent lower-privilege staff from acting on equal or higher accounts
+  const requesterRank = ROLE_RANK[req.user.role] ?? 0;
+  const targetRank = ROLE_RANK[target.role] ?? 0;
+  if (requesterRank <= targetRank && req.user._id.toString() !== target._id.toString()) {
+    return res.status(403).json({ message: "Insufficient privilege to modify this account" });
+  }
   const update = {};
   if (banned !== undefined) update.banned = banned;
   // customers only — staff uses /admin/staff endpoints
@@ -154,8 +181,9 @@ export async function updateUser(req, res) {
   const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!user) return res.status(404).json({ message: "User not found" });
 
-  // Also ban their IP if provided
-  if (banned && bannedIp) {
+  // Also ban their IP if provided (validate format first)
+  const { isIP } = await import("net");
+  if (banned && bannedIp && isIP(bannedIp) !== 0) {
     const bannedIPs = await BannedIP.getSingleton();
     if (!bannedIPs.ips.includes(bannedIp)) {
       bannedIPs.ips.push(bannedIp);
@@ -169,7 +197,14 @@ export async function updateUser(req, res) {
 // ── Staff management (master_admin only) ─────────────────────────────────────
 
 export async function listStaff(req, res) {
-  res.json(await User.find({ role: { $in: STAFF_ROLES } }).sort({ createdAt: -1 }));
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 50);
+  const skip = (page - 1) * limit;
+  const [users, total] = await Promise.all([
+    User.find({ role: { $in: STAFF_ROLES } }).sort({ createdAt: -1 }).skip(skip).limit(limit).select("-password -tokenVersion"),
+    User.countDocuments({ role: { $in: STAFF_ROLES } }),
+  ]);
+  res.json({ users, total, page, pages: Math.ceil(total / limit) });
 }
 
 export async function createStaff(req, res) {
@@ -197,6 +232,10 @@ export async function updateStaff(req, res) {
     return res.status(400).json({ message: "Not a staff account" });
   if (target.role === "master_admin" && req.user._id.toString() !== target._id.toString())
     return res.status(403).json({ message: "Cannot modify another master admin" });
+
+  if (role && req.user._id.toString() === target._id.toString()) {
+    return res.status(400).json({ message: "Cannot change your own role" });
+  }
 
   const update = {};
   if (name) update.name = name;

@@ -5,7 +5,8 @@ import { useAuthStore } from "../../store/useAuthStore.js";
 import api from "../../lib/api.js";
 import { formatPrice } from "../../lib/format.js";
 
-export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
+export default function JoinModal({ bloc, onClose, onSuccess, quantity: initialQty = 1 }) {
+  const [qty, setQty] = useState(initialQty);
   const title = useText("join.title", "Join This Bloc");
   const ctaText = useText("join.ctaText", "CREATE ACCOUNT AND JOIN BLOC");
   const currency = useText("site.currency", "৳");
@@ -28,7 +29,7 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
       const charge = isFree ? 0 : (data.insideDhakaCharge || 0);
       setForm((f) => ({ ...f, deliveryZone: zone, deliveryCharge: charge }));
     }).catch(() => {});
-  }, []);
+  }, [bloc]);
 
   const stripCountryCode = (num = "") => num.replace(/^\+?880/, "0").replace(/\D/g, "").slice(0, 11);
 
@@ -77,7 +78,7 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
     setError("");
     const payload = { ...form };
     try {
-      const { data } = await api.post("/orders", { blocId: bloc._id, quantity, ...payload });
+      const { data } = await api.post("/orders", { blocId: bloc._id, quantity: qty, ...payload });
       // If an account was created (password provided), log the customer in with their own name.
       if (data.accessToken) setAuth({ user: data.user, accessToken: data.accessToken });
       onSuccess(data.order);
@@ -245,10 +246,27 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
             </div>
           )}
 
+          {/* Quantity selector */}
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase text-muted">Quantity</label>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))}
+                disabled={qty <= 1}
+                className="h-8 w-8 rounded-lg border border-line text-lg font-bold text-ink hover:border-brand hover:text-brand disabled:opacity-40">
+                −
+              </button>
+              <span className="w-8 text-center text-base font-bold text-ink">{qty}</span>
+              <button type="button" onClick={() => setQty((q) => q + 1)}
+                className="h-8 w-8 rounded-lg border border-line text-lg font-bold text-ink hover:border-brand hover:text-brand">
+                +
+              </button>
+            </div>
+          </div>
+
           <div className="rounded-lg bg-cream px-3 py-2 text-sm space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-muted">Product</span>
-              <span className="text-ink">{currency}{formatPrice(bloc.blocPrice)}</span>
+              <span className="text-muted">Product × {qty}</span>
+              <span className="text-ink">{currency}{formatPrice(bloc.blocPrice * qty)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted">Delivery</span>
@@ -256,7 +274,7 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity = 1 }) {
             </div>
             <div className="flex items-center justify-between border-t border-line pt-1">
               <span className="font-bold text-ink">Total</span>
-              <span className="font-bold text-ink">{currency}{formatPrice(bloc.blocPrice + form.deliveryCharge)}</span>
+              <span className="font-bold text-ink">{currency}{formatPrice(bloc.blocPrice * qty + form.deliveryCharge)}</span>
             </div>
           </div>
 

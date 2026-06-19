@@ -1,94 +1,103 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore.js";
 
 import Layout from "./components/common/Layout.jsx";
-import Home from "./pages/Home.jsx";
-import AllBlocs from "./pages/AllBlocs.jsx";
-import Categories from "./pages/Categories.jsx";
-import BlocDetail from "./pages/BlocDetail.jsx";
-import TrackOrder from "./pages/TrackOrder.jsx";
-import StaticPage from "./pages/StaticPage.jsx";
-import Profile from "./pages/Profile.jsx";
-import ForgotPassword from "./pages/ForgotPassword.jsx";
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
-
 import RequireAdmin from "./components/admin/RequireAdmin.jsx";
 import AdminLayout from "./components/admin/AdminLayout.jsx";
-import AdminLogin from "./pages/admin/AdminLogin.jsx";
-import Dashboard from "./pages/admin/Dashboard.jsx";
-import ManageBlocs from "./pages/admin/ManageBlocs.jsx";
-import ManageOrders from "./pages/admin/ManageOrders.jsx";
-import ManageUsers from "./pages/admin/ManageUsers.jsx";
-import ManageCategories from "./pages/admin/ManageCategories.jsx";
-import ManageProducts from "./pages/admin/ManageProducts.jsx";
-import ProductEditor from "./pages/admin/ProductEditor.jsx";
-import ManageStaff from "./pages/admin/ManageStaff.jsx";
-import ManageSubscribers from "./pages/admin/ManageSubscribers.jsx";
-import ManageBlocRequests from "./pages/admin/ManageBlocRequests.jsx";
-import RequestBlocPage from "./pages/RequestBlocPage.jsx";
-import ContentEditor from "./pages/admin/ContentEditor.jsx";
-import SiteSettings from "./pages/admin/SiteSettings.jsx";
-import ManageSEO from "./pages/admin/ManageSEO.jsx";
-import ManagePaymentGateways from "./pages/admin/ManagePaymentGateways.jsx";
-import ManageSms from "./pages/admin/ManageSms.jsx";
-import ManageEmail from "./pages/admin/ManageEmail.jsx";
-import ManageIntegrations from "./pages/admin/ManageIntegrations.jsx";
-import ManageCouriers from "./pages/admin/ManageCouriers.jsx";
+
+const Home = lazy(() => import("./pages/Home.jsx"));
+const AllBlocs = lazy(() => import("./pages/AllBlocs.jsx"));
+const Categories = lazy(() => import("./pages/Categories.jsx"));
+const BlocDetail = lazy(() => import("./pages/BlocDetail.jsx"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder.jsx"));
+const StaticPage = lazy(() => import("./pages/StaticPage.jsx"));
+const Profile = lazy(() => import("./pages/Profile.jsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Register = lazy(() => import("./pages/Register.jsx"));
+const RequestBlocPage = lazy(() => import("./pages/RequestBlocPage.jsx"));
+
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin.jsx"));
+const Dashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
+const ManageBlocs = lazy(() => import("./pages/admin/ManageBlocs.jsx"));
+const ManageOrders = lazy(() => import("./pages/admin/ManageOrders.jsx"));
+const ManageUsers = lazy(() => import("./pages/admin/ManageUsers.jsx"));
+const ManageCategories = lazy(() => import("./pages/admin/ManageCategories.jsx"));
+const ManageProducts = lazy(() => import("./pages/admin/ManageProducts.jsx"));
+const ProductEditor = lazy(() => import("./pages/admin/ProductEditor.jsx"));
+const ManageStaff = lazy(() => import("./pages/admin/ManageStaff.jsx"));
+const ManageSubscribers = lazy(() => import("./pages/admin/ManageSubscribers.jsx"));
+const ManageBlocRequests = lazy(() => import("./pages/admin/ManageBlocRequests.jsx"));
+const ContentEditor = lazy(() => import("./pages/admin/ContentEditor.jsx"));
+const SiteSettings = lazy(() => import("./pages/admin/SiteSettings.jsx"));
+const ManageSEO = lazy(() => import("./pages/admin/ManageSEO.jsx"));
+const ManagePaymentGateways = lazy(() => import("./pages/admin/ManagePaymentGateways.jsx"));
+const ManageSms = lazy(() => import("./pages/admin/ManageSms.jsx"));
+const ManageEmail = lazy(() => import("./pages/admin/ManageEmail.jsx"));
+const ManageIntegrations = lazy(() => import("./pages/admin/ManageIntegrations.jsx"));
+const ManageCouriers = lazy(() => import("./pages/admin/ManageCouriers.jsx"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+  </div>
+);
 
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
   return (
-    <Routes>
-      {/* Storefront */}
-      <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/blocs" element={<Navigate to="/categories" replace />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/blocs/:id" element={<BlocDetail />} />
-        <Route path="/track-order" element={<TrackOrder />} />
-        <Route path="/about" element={<StaticPage />} />
-        <Route path="/help-center" element={<StaticPage />} />
-        <Route path="/refund-policy" element={<StaticPage />} />
-        <Route path="/delivery-info" element={<StaticPage />} />
-        <Route path="/terms" element={<StaticPage />} />
-        <Route path="/privacy-policy" element={<StaticPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/request-bloc" element={<RequestBlocPage />} />
-      </Route>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Storefront */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/blocs" element={<Navigate to="/categories" replace />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/blocs/:id" element={<BlocDetail />} />
+          <Route path="/track-order" element={<TrackOrder />} />
+          <Route path="/about" element={<StaticPage />} />
+          <Route path="/help-center" element={<StaticPage />} />
+          <Route path="/refund-policy" element={<StaticPage />} />
+          <Route path="/delivery-info" element={<StaticPage />} />
+          <Route path="/terms" element={<StaticPage />} />
+          <Route path="/privacy-policy" element={<StaticPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/request-bloc" element={<RequestBlocPage />} />
+        </Route>
 
-      {/* Admin login — standalone, no layout, no auth guard */}
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+        {/* Admin login — standalone, no layout, no auth guard */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
-      {/* Admin panel — protected, staff only */}
-      <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
-        <Route index element={<Dashboard />} />
-        <Route path="blocs" element={<ManageBlocs />} />
-        <Route path="orders" element={<ManageOrders />} />
-        <Route path="users" element={<ManageUsers />} />
-        <Route path="subscribers" element={<ManageSubscribers />} />
-        <Route path="bloc-requests" element={<ManageBlocRequests />} />
-        <Route path="categories" element={<ManageCategories />} />
-        <Route path="products" element={<ManageProducts />} />
-        <Route path="products/new" element={<ProductEditor />} />
-        <Route path="products/:id" element={<ProductEditor />} />
-        <Route path="staff" element={<ManageStaff />} />
-        <Route path="content" element={<ContentEditor />} />
-        <Route path="settings" element={<SiteSettings />} />
-        <Route path="seo" element={<ManageSEO />} />
-        <Route path="payment-gateways" element={<ManagePaymentGateways />} />
-        <Route path="couriers" element={<ManageCouriers />} />
-        <Route path="sms" element={<ManageSms />} />
-        <Route path="email" element={<ManageEmail />} />
-        <Route path="integrations" element={<ManageIntegrations />} />
-      </Route>
-    </Routes>
+        {/* Admin panel — protected, staff only */}
+        <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
+          <Route index element={<Dashboard />} />
+          <Route path="blocs" element={<ManageBlocs />} />
+          <Route path="orders" element={<ManageOrders />} />
+          <Route path="users" element={<ManageUsers />} />
+          <Route path="subscribers" element={<ManageSubscribers />} />
+          <Route path="bloc-requests" element={<ManageBlocRequests />} />
+          <Route path="categories" element={<ManageCategories />} />
+          <Route path="products" element={<ManageProducts />} />
+          <Route path="products/new" element={<ProductEditor />} />
+          <Route path="products/:id" element={<ProductEditor />} />
+          <Route path="staff" element={<ManageStaff />} />
+          <Route path="content" element={<ContentEditor />} />
+          <Route path="settings" element={<SiteSettings />} />
+          <Route path="seo" element={<ManageSEO />} />
+          <Route path="payment-gateways" element={<ManagePaymentGateways />} />
+          <Route path="couriers" element={<ManageCouriers />} />
+          <Route path="sms" element={<ManageSms />} />
+          <Route path="email" element={<ManageEmail />} />
+          <Route path="integrations" element={<ManageIntegrations />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

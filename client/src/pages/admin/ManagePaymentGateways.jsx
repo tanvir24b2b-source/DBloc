@@ -17,8 +17,8 @@ const CREDENTIAL_FIELDS = {
     { key: "instructions", label: "Instructions for Customer", placeholder: "Send money to our bKash account and enter your TrxID below.", type: "text" },
   ],
   nagad: [
-    { key: "merchantId",  label: "Merchant ID" },
-    { key: "merchantKey", label: "Merchant Key" },
+    { key: "number",       label: "Your Nagad Number", placeholder: "01XXXXXXXXX", type: "text" },
+    { key: "instructions", label: "Instructions for Customer", placeholder: "Send money to our Nagad account and enter your TrxID below.", type: "text" },
   ],
   cod: [],
 };
@@ -60,6 +60,9 @@ function GatewayCard({ gw, onSaved }) {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = "";
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+    if (!ALLOWED.includes(file.type)) { setMsg("Logo must be JPG, PNG, WebP or SVG"); return; }
+    if (file.size > 150 * 1024) { setMsg("Logo must be under 150 KB"); return; }
     const reader = new FileReader();
     reader.onload = (ev) => setCreds((c) => ({ ...c, logo: ev.target.result }));
     reader.readAsDataURL(file);
@@ -148,7 +151,12 @@ function GatewayCard({ gw, onSaved }) {
           {/* Credential fields (API keys, number, etc.) */}
           {fields.length > 0 && (
             <div className="space-y-3 border-t border-gray-200 pt-3">
-              <p className="text-[10px] font-bold uppercase text-gray-400">{gw.type === "bkashmanual" ? "Payment Details" : "API Credentials"}</p>
+              <p className="text-[10px] font-bold uppercase text-gray-400">{["bkashmanual", "nagad"].includes(gw.type) ? "Payment Details" : "API Credentials"}</p>
+              {["sslcommerz", "bkash"].includes(gw.type) && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  API keys for this gateway must be set in the server <code>.env</code> file — they are never stored in the database.
+                </p>
+              )}
               {fields.map(({ key, label, placeholder, type: ftype }) => (
                 <div key={key}>
                   <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">{label}</label>

@@ -102,7 +102,7 @@ export default function Reviews() {
                 return (
                   <div key={i} className="shrink-0 px-2" style={{ width: `${step}%` }}>
                     <div className="rounded-xl border border-line bg-white p-5 h-full flex flex-col gap-3">
-                      <div className="text-2xl text-brand leading-none">★</div>
+                      <div className="text-2xl leading-none" style={{ color: "#F59E0B", textShadow: "0 0 8px rgba(245,158,11,0.6)" }}>★</div>
                       <p className="text-sm leading-relaxed text-ink/80 flex-1">
                         <EditableText keyName={r.t} fallback={r.tf} />
                       </p>
@@ -114,7 +114,6 @@ export default function Reviews() {
                           <p className="text-xs font-semibold text-ink truncate"><EditableText keyName={r.n} fallback={r.nf} /></p>
                           <p className="text-[10px] text-muted">{r.ago}</p>
                         </div>
-                        <div className="ml-auto text-brand text-[10px] tracking-tight flex-shrink-0">★★★★★</div>
                       </div>
                     </div>
                   </div>

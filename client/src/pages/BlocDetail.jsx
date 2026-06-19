@@ -125,18 +125,27 @@ export default function BlocDetail() {
   const moreNeeded = Math.max(0, unlockGoal - joined);
   const unlockPct = Math.min(100, Math.round((joined / unlockGoal) * 100));
 
-  // Pricing tiers
-  const mid = Math.round(((bloc.originalPrice + bloc.blocPrice) / 2) / 10) * 10;
-  const a = Math.max(2, Math.round(unlockGoal * 0.6));
-  const tiers = [
-    { range: `1–${a - 1} UNITS`, price: bloc.originalPrice },
-    { range: `${a}–${unlockGoal - 1} UNITS`, price: mid },
-    { range: `${unlockGoal}+ UNITS`, price: bloc.blocPrice, best: true },
-  ];
+  // Pricing tiers: use admin-configured tiers if present, else derive from prices
+  const tiers = bloc.priceTiers?.length
+    ? bloc.priceTiers.map((t, i, arr) => ({
+        range: t.max ? `${t.min}–${t.max} UNITS` : `${t.min}+ UNITS`,
+        price: t.price,
+        best: i === arr.length - 1,
+      }))
+    : (() => {
+        const mid = Math.round(((bloc.originalPrice + bloc.blocPrice) / 2) / 10) * 10;
+        const a = Math.max(2, Math.round(unlockGoal * 0.6));
+        return [
+          { range: `1–${a - 1} UNITS`, price: bloc.originalPrice },
+          { range: `${a}–${unlockGoal - 1} UNITS`, price: mid },
+          { range: `${unlockGoal}+ UNITS`, price: bloc.blocPrice, best: true },
+        ];
+      })();
 
-  // Delivery dates
+  // Delivery dates: estimate relative to when the bloc fills (endTime), not today
+  const fillDate = new Date(bloc.endTime);
   const fmt = (addDays) => {
-    const d = new Date(Date.now() + addDays * 8.64e7);
+    const d = new Date(fillDate.getTime() + addDays * 8.64e7);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 

@@ -29,6 +29,7 @@ router.get("/auth/me", protect, wrap(auth.me));
 router.post("/auth/logout", wrap(auth.logout));
 router.put("/auth/profile", protect, wrap(auth.updateProfile));
 router.post("/auth/forgot-password", wrap(auth.forgotPassword));
+router.post("/auth/reset-password", wrap(auth.resetPasswordWithOtp));
 
 // --- Blocs ---
 router.get("/blocs", wrap(bloc.listBlocs));

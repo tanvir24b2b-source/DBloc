@@ -14,6 +14,10 @@ export default function Register() {
 
   async function submit(e) {
     e.preventDefault();
+    if (!/^01[0-9]{9}$/.test(form.mobile)) {
+      setError("Enter a valid 11-digit Bangladeshi mobile number");
+      return;
+    }
     setLoading(true); setError("");
     try {
       await register(form);
@@ -32,7 +36,7 @@ export default function Register() {
       <form onSubmit={submit} className="mt-6 space-y-3">
         <input required placeholder="Full name" value={form.name} onChange={set("name")} className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
         <input type="email" required placeholder="Email" value={form.email} onChange={set("email")} className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
-        <input placeholder="Mobile" value={form.mobile} onChange={set("mobile")} className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
+        <input type="tel" placeholder="Mobile (e.g. 01700000000)" value={form.mobile} onChange={set("mobile")} pattern="01[0-9]{9}" maxLength={11} className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
         <input type="password" required placeholder="Password" value={form.password} onChange={set("password")} className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
         {error && <p className="text-sm text-danger">{error}</p>}
         <button disabled={loading} className="w-full rounded-full bg-brand py-2.5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">

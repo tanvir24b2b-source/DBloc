@@ -33,7 +33,9 @@ export function ContentProvider({ children }) {
   // In edit mode, listen for save messages from the admin parent window
   useEffect(() => {
     if (!editMode) return;
+    const ALLOWED_ORIGIN = window.location.origin;
     function onMessage(e) {
+      if (e.origin !== ALLOWED_ORIGIN) return;
       if (e.data?.type === "cms-updated") {
         setMap((m) => ({ ...m, [e.data.key]: e.data.value }));
       }

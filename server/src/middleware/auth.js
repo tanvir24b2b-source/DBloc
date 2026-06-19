@@ -11,10 +11,13 @@ export async function protect(req, res, next) {
     }
     if (!token) return res.status(401).json({ message: "Not authenticated" });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
     if (user.banned) return res.status(403).json({ message: "Account banned" });
+    if ((decoded.tv ?? 0) !== (user.tokenVersion || 0)) {
+      return res.status(401).json({ message: "Session revoked, please log in again" });
+    }
 
     req.user = user;
     next();

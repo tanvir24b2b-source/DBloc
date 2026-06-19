@@ -5,10 +5,13 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach access token from store (set lazily to avoid circular import)
+// Token is injected by the auth store via this setter to avoid circular imports.
+// useAuthStore calls api.setToken() whenever the token changes.
+let _token = null;
+api.setToken = (t) => { _token = t; };
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("dbloc_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (_token) config.headers.Authorization = `Bearer ${_token}`;
   return config;
 });
 

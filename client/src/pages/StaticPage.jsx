@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import DOMPurify from "dompurify";
 import api from "../lib/api.js";
 
 // Map URL slug → content page name + content keys.
@@ -21,9 +22,9 @@ function renderBody(text) {
       const html = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
       if (!line.trim()) return <div key={i} className="h-3" />;
       if (html !== line || line.startsWith("**")) {
-        return <p key={i} className="text-sm leading-relaxed text-ink/80" dangerouslySetInnerHTML={{ __html: html }} />;
+        return <p key={i} className="text-sm leading-relaxed text-ink/80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
       }
-      return <p key={i} className="text-sm leading-relaxed text-ink/80" dangerouslySetInnerHTML={{ __html: html }} />;
+      return <p key={i} className="text-sm leading-relaxed text-ink/80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
     });
 }
 

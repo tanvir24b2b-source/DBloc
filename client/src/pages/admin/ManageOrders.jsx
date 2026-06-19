@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api.js";
 import { formatPrice } from "../../lib/format.js";
@@ -32,6 +32,11 @@ function isOnlinePaid(paymentMethod) {
 
 function OrderEditPanel({ order, onClose, onUpdated }) {
   const { data: allBlocs = [] } = useBlocs();
+  const [courierRates, setCourierRates] = useState(null);
+
+  useEffect(() => {
+    api.get("/courier-settings").then(({ data }) => setCourierRates(data)).catch(() => {});
+  }, []);
 
   const [form, setForm] = useState({
     customerName:   order.customerName || "",
@@ -53,6 +58,7 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
   const [blocSearch, setBlocSearch] = useState(order.bloc?.title || "");
   const [blocDropOpen, setBlocDropOpen] = useState(false);
   const [dangerOpen, setDangerOpen] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
 
   const isShipped = ["shipped", "delivered", "pending_return", "returned"].includes(order.status);
   const canShip   = ["confirmed", "processing"].includes(order.status);
@@ -105,7 +111,6 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
   }
 
   async function blockCustomer() {
-    if (!window.confirm(`Block ${order.customerName} (${order.mobile})? They won't be able to place orders.`)) return;
     setBlocking(true);
     try {
       await api.put(`/admin/users/${order.user}`, { banned: true, bannedIp: order.clientIp || undefined });
@@ -148,20 +153,20 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 text-base leading-tight">{order.bloc?.title || "—"}</p>
-              {order.bloc?.blocPrice && (
-                <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1">
+                {order.bloc?.blocPrice && (
                   <span className="text-xs text-gray-500">৳{formatPrice(order.bloc.blocPrice)} ×</span>
-                  <div className="flex items-center gap-1">
-                    <button type="button" disabled={isShipped || form.quantity <= 1}
-                      onClick={() => setForm((f) => ({ ...f, quantity: Math.max(1, f.quantity - 1) }))}
-                      className="h-5 w-5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">−</button>
-                    <span className="w-6 text-center text-sm font-semibold text-gray-800">{form.quantity}</span>
-                    <button type="button" disabled={isShipped}
-                      onClick={() => setForm((f) => ({ ...f, quantity: f.quantity + 1 }))}
-                      className="h-5 w-5 rounded border border-gray-300 text-xs font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">+</button>
-                  </div>
+                )}
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={isShipped || form.quantity <= 1}
+                    onClick={() => setForm((f) => ({ ...f, quantity: Math.max(1, f.quantity - 1) }))}
+                    className="h-6 w-6 rounded border border-gray-300 text-sm font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">−</button>
+                  <span className="w-8 text-center text-sm font-semibold text-gray-800">{form.quantity}</span>
+                  <button type="button" disabled={isShipped}
+                    onClick={() => setForm((f) => ({ ...f, quantity: f.quantity + 1 }))}
+                    className="h-6 w-6 rounded border border-gray-300 text-sm font-bold text-gray-600 hover:border-brand hover:text-brand disabled:opacity-40">+</button>
                 </div>
-              )}
+              </div>
               <div className="mt-3 space-y-0.5 text-xs text-gray-600">
                 <div className="flex justify-between"><span>Product</span><span>৳{formatPrice(productPrice)}</span></div>
                 <div className="flex justify-between"><span>Delivery</span><span>+৳{formatPrice(delivery)}</span></div>
@@ -206,10 +211,24 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Zone</label>
-                <select value={form.deliveryZone} onChange={set("deliveryZone")} disabled={isShipped} className={INP}>
-                  <option value="inside_dhaka">Inside Dhaka</option>
-                  <option value="outside_dhaka">Outside Dhaka</option>
-                  <option value="free">Free</option>
+                <select
+                  value={form.deliveryZone}
+                  disabled={isShipped}
+                  className={INP}
+                  onChange={(e) => {
+                    const zone = e.target.value;
+                    let charge = form.deliveryCharge;
+                    if (courierRates) {
+                      if (zone === "free") charge = 0;
+                      else if (zone === "inside_dhaka") charge = courierRates.insideDhakaCharge ?? 70;
+                      else if (zone === "outside_dhaka") charge = courierRates.outsideDhakaCharge ?? 120;
+                    }
+                    setForm((f) => ({ ...f, deliveryZone: zone, deliveryCharge: charge }));
+                  }}
+                >
+                  <option value="inside_dhaka">Inside Dhaka {courierRates ? `(৳${courierRates.insideDhakaCharge ?? 70})` : ""}</option>
+                  <option value="outside_dhaka">Outside Dhaka {courierRates ? `(৳${courierRates.outsideDhakaCharge ?? 120})` : ""}</option>
+                  <option value="free">Free Delivery (৳0)</option>
                 </select>
               </div>
               <div>
@@ -349,10 +368,26 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
               {dangerOpen && (
                 <div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
                   <p className="text-xs text-red-500 mb-2">This will block the customer from placing future orders.</p>
-                  <button onClick={blockCustomer} disabled={blocking}
-                    className="rounded-lg border border-red-300 px-4 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50">
-                    {blocking ? "Blocking..." : "🚫 Block This Customer"}
-                  </button>
+                  {!confirmBlock ? (
+                    <button onClick={() => setConfirmBlock(true)} disabled={blocking}
+                      className="rounded-lg border border-red-300 px-4 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50">
+                      🚫 Block This Customer
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-red-700">Block {order.customerName} ({order.mobile})? This cannot be undone easily.</p>
+                      <div className="flex gap-2">
+                        <button onClick={blockCustomer} disabled={blocking}
+                          className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                          {blocking ? "Blocking..." : "Yes, Block"}
+                        </button>
+                        <button onClick={() => setConfirmBlock(false)}
+                          className="rounded-lg border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

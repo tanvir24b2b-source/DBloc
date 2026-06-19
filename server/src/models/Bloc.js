@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const blocSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
-    slug: { type: String, trim: true },
+    slug: { type: String, trim: true, unique: true, sparse: true },
     description: { type: String, default: "" },       // short 1-line (used on cards)
     shortDescription: { type: String, default: "" },   // tagline / subheading
     fullDescription: { type: String, default: "" },    // rich/full product description
@@ -19,7 +19,7 @@ const blocSchema = new mongoose.Schema(
 
     maxSpots: { type: Number, required: true, default: 100 },  // Stock / capacity
     goal: { type: Number, default: 0 },                         // Unlock threshold for D-Bloc price (0 = derive from capacity)
-    filledSpots: { type: Number, default: 0 },                 // Real joins, driven only by orders
+    filledSpots: { type: Number, default: 0, min: 0 },          // Real joins, driven only by orders
 
     endTime: { type: Date, required: true },
 
@@ -39,6 +39,11 @@ const blocSchema = new mongoose.Schema(
     variants: [{
       group: String,   // e.g. "Color"
       options: [{ name: String, image: String, price: Number }],
+    }],
+    features: [{
+      icon:  { type: String, default: "" },
+      title: { type: String, default: "" },
+      desc:  { type: String, default: "" },
     }],
   },
   { timestamps: true }
@@ -65,5 +70,9 @@ blocSchema.virtual("status").get(function () {
 
 blocSchema.set("toJSON", { virtuals: true });
 blocSchema.set("toObject", { virtuals: true });
+
+blocSchema.index({ hidden: 1, endTime: 1 });
+blocSchema.index({ featured: 1, hidden: 1 });
+blocSchema.index({ category: 1, hidden: 1, endTime: 1 });
 
 export default mongoose.model("Bloc", blocSchema);

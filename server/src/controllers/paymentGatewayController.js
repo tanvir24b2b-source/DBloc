@@ -27,7 +27,7 @@ export async function listPublic(req, res) {
       const base = { _id: gw._id, type: gw.type, displayName: gw.displayName, isDefault: gw.isDefault, sortOrder: gw.sortOrder };
       // Expose number+instructions for manual gateways so checkout can display them
       if (gw.credentials?.logo) base.logo = gw.credentials.logo;
-      if (gw.type === "bkashmanual" || gw.credentials?.isManual) {
+      if (gw.type === "bkashmanual" || gw.type === "nagad" || gw.credentials?.isManual) {
         base.manualNumber = gw.credentials?.number || "";
         base.manualInstructions = gw.credentials?.instructions || "";
       }
@@ -36,11 +36,28 @@ export async function listPublic(req, res) {
   });
 }
 
-// GET /api/admin/payment-gateways  (admin — full data)
+const SECRET_FIELDS = ["storePass", "appKey", "appSecret", "password", "merchantKey"];
+
+function maskCredentials(gw) {
+  const obj = gw.toObject();
+  if (obj.credentials) {
+    const masked = { ...obj.credentials };
+    for (const field of SECRET_FIELDS) {
+      if (masked[field]) masked[field] = "••••••••";
+    }
+    obj.credentials = masked;
+  }
+  return obj;
+}
+
+// GET /api/admin/payment-gateways  (admin — secret fields masked in response)
 export async function listAdmin(req, res) {
   const gateways = await PaymentGateway.find().sort("sortOrder");
-  res.json({ gateways });
+  res.json({ gateways: gateways.map(maskCredentials) });
 }
+
+// Gateway types whose secrets live in .env — never written to or read from DB
+const ENV_MANAGED_TYPES = ["sslcommerz", "bkash", "nagad"];
 
 // PUT /api/admin/payment-gateways/:id
 export async function updateGateway(req, res) {
@@ -51,7 +68,14 @@ export async function updateGateway(req, res) {
   if (displayName !== undefined) gw.displayName = displayName;
   if (enabled !== undefined) gw.enabled = enabled;
   if (sortOrder !== undefined) gw.sortOrder = sortOrder;
-  if (credentials !== undefined) gw.credentials = { ...gw.credentials, ...credentials };
+  if (credentials !== undefined) {
+    let safe = { ...credentials };
+    // For env-managed gateways, strip secret fields so they are never stored in DB
+    if (ENV_MANAGED_TYPES.includes(gw.type)) {
+      for (const field of SECRET_FIELDS) delete safe[field];
+    }
+    gw.credentials = { ...gw.credentials, ...safe };
+  }
 
   // Only one can be default — unset others first
   if (isDefault) {
@@ -61,7 +85,7 @@ export async function updateGateway(req, res) {
   }
 
   await gw.save();
-  res.json({ gateway: gw });
+  res.json({ gateway: maskCredentials(gw) });
 }
 
 // POST /api/admin/payment-gateways  (add custom gateway)

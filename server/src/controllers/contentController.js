@@ -25,7 +25,10 @@ export async function updateContentItem(req, res) {
 
 // Admin: bulk update [{ key, value }]
 export async function bulkUpdateContent(req, res) {
-  const updates = req.body.updates || [];
+  const updates = req.body.updates;
+  if (!Array.isArray(updates) || updates.length > 500) {
+    return res.status(400).json({ message: "updates must be an array of at most 500 items" });
+  }
   await Promise.all(
     updates.map((u) =>
       SiteContent.findOneAndUpdate({ key: u.key }, { value: u.value }, { upsert: true })
@@ -36,13 +39,11 @@ export async function bulkUpdateContent(req, res) {
 
 // Admin: seed default content (idempotent — only inserts missing keys)
 export async function seedContent(req, res) {
-  let created = 0;
-  for (const c of defaultContent) {
-    const exists = await SiteContent.findOne({ key: c.key });
-    if (!exists) {
-      await SiteContent.create(c);
-      created++;
-    }
+  try {
+    await SiteContent.insertMany(defaultContent, { ordered: false });
+  } catch (err) {
+    // ignore duplicate key errors (E11000) — existing keys are skipped
+    if (err.code !== 11000 && err.name !== "BulkWriteError") throw err;
   }
-  res.json({ message: `Seeded ${created} new content items (${defaultContent.length} total)` });
+  res.json({ message: "Content seeded" });
 }

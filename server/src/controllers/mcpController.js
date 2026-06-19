@@ -1,8 +1,21 @@
+import { timingSafeEqual } from "crypto";
 import SeoSettings from "../models/SeoSettings.js";
 import Bloc from "../models/Bloc.js";
 import Order from "../models/Order.js";
 import Category from "../models/Category.js";
 import SiteContent from "../models/SiteContent.js";
+
+function timingSafeTokenCompare(stored, provided) {
+  if (!stored || !provided) return false;
+  try {
+    const a = Buffer.from(stored);
+    const b = Buffer.from(provided);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 const TOOLS = [
   {
@@ -242,7 +255,15 @@ async function callTool(name, args) {
     }
 
     case "update_content": {
-      await SiteContent.findOneAndUpdate({ key: args.key }, { value: args.value }, { upsert: true });
+      const existing = await SiteContent.findOne({ key: args.key });
+      if (!existing) {
+        return { content: [{ type: "text", text: `Key "${args.key}" does not exist` }], isError: true };
+      }
+      await SiteContent.findOneAndUpdate(
+        { key: args.key },
+        { $set: { value: args.value } },
+        { new: true }
+      );
       return { updated: true, key: args.key };
     }
 
@@ -256,7 +277,7 @@ async function verifyToken(req) {
   const token = auth.replace("Bearer ", "").trim();
   if (!token) return false;
   const seo = await SeoSettings.getSingleton();
-  return seo.mcpToken && seo.mcpToken === token;
+  return timingSafeTokenCompare(seo.mcpToken, token);
 }
 
 export async function mcpHandler(req, res) {
@@ -289,6 +310,7 @@ export async function mcpHandler(req, res) {
     }
     return res.status(400).json({ jsonrpc: "2.0", id, error: { code: -32601, message: "Method not found" } });
   } catch (err) {
-    return res.status(500).json({ jsonrpc: "2.0", id, error: { code: -32000, message: err.message } });
+    const errMsg = process.env.NODE_ENV === "production" ? "Internal error" : err.message;
+    return res.status(500).json({ jsonrpc: "2.0", id, error: { code: -32000, message: errMsg } });
   }
 }

@@ -1,39 +1,39 @@
 import { create } from "zustand";
 import api from "../lib/api.js";
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
-  token: localStorage.getItem("dbloc_token") || null,
+  token: null,
   loading: true,
 
   setAuth: ({ user, accessToken }) => {
-    if (accessToken) localStorage.setItem("dbloc_token", accessToken);
-    set({ user, token: accessToken || localStorage.getItem("dbloc_token") });
+    if (accessToken) api.setToken(accessToken);
+    set({ user, token: accessToken ?? get().token });
   },
 
   async login(email, password) {
     const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("dbloc_token", data.accessToken);
+    api.setToken(data.accessToken);
     set({ user: data.user, token: data.accessToken });
     return data.user;
   },
 
   async register(payload) {
     const { data } = await api.post("/auth/register", payload);
-    localStorage.setItem("dbloc_token", data.accessToken);
+    api.setToken(data.accessToken);
     set({ user: data.user, token: data.accessToken });
     return data.user;
   },
 
   async fetchMe() {
-    const token = localStorage.getItem("dbloc_token");
+    const token = get().token;
     if (!token) {
-      // Try refresh token cookie to restore session silently
       try {
         const { data } = await api.post("/auth/refresh");
-        localStorage.setItem("dbloc_token", data.accessToken);
+        api.setToken(data.accessToken);
         set({ user: data.user, token: data.accessToken, loading: false });
       } catch {
+        api.setToken(null);
         set({ user: null, token: null, loading: false });
       }
       return;
@@ -42,13 +42,12 @@ export const useAuthStore = create((set) => ({
       const { data } = await api.get("/auth/me");
       set({ user: data.user, loading: false });
     } catch {
-      // Access token expired — try to refresh
       try {
         const { data } = await api.post("/auth/refresh");
-        localStorage.setItem("dbloc_token", data.accessToken);
+        api.setToken(data.accessToken);
         set({ user: data.user, token: data.accessToken, loading: false });
       } catch {
-        localStorage.removeItem("dbloc_token");
+        api.setToken(null);
         set({ user: null, token: null, loading: false });
       }
     }
@@ -60,7 +59,7 @@ export const useAuthStore = create((set) => ({
 
   logout() {
     api.post("/auth/logout").catch(() => {});
-    localStorage.removeItem("dbloc_token");
+    api.setToken(null);
     set({ user: null, token: null });
   },
 }));

@@ -18,6 +18,56 @@ function useDebounce(value, delay = 300) {
   return debounced;
 }
 
+/* ── Search dropdown (module-scope to avoid re-creating the component type on every render) ── */
+function SearchDropdown({ showDrop, matchedCats, searchBlocs, hasResults, dq, q, currency, go, formatPrice }) {
+  if (!showDrop) return null;
+  return (
+    <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-line bg-white shadow-xl overflow-hidden z-50">
+      {matchedCats.length > 0 && (
+        <div>
+          <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted">Categories</p>
+          {matchedCats.map(c => (
+            <button key={c._id} type="button" onClick={() => go("/categories")}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-cream transition">
+              <div className="h-8 w-8 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
+                {c.image ? <img src={c.image} alt={c.name} className="w-full h-full object-cover" /> : <span className="text-base">📦</span>}
+              </div>
+              <span className="text-sm font-semibold text-ink">{c.name}</span>
+              <span className="ml-auto text-[11px] text-muted">category</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {searchBlocs.length > 0 && (
+        <div>
+          {matchedCats.length > 0 && <div className="border-t border-line mx-3" />}
+          <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted">Products</p>
+          {searchBlocs.slice(0, 5).map(b => (
+            <button key={b._id} type="button" onClick={() => go(`/blocs/${b._id}`)}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-cream transition">
+              <img src={b.image} alt={b.title} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-line" />
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{b.title}</p>
+                <p className="text-[11px] text-muted">{b.category?.name ?? ""}</p>
+              </div>
+              <span className="shrink-0 text-sm font-bold text-brand">{currency}{formatPrice(b.blocPrice)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {!hasResults && dq.trim().length >= 2 && (
+        <p className="px-4 py-4 text-sm text-muted">No results for "{dq}"</p>
+      )}
+      {hasResults && (
+        <button type="submit"
+          className="flex w-full items-center justify-center gap-1 border-t border-line bg-cream px-4 py-3 text-xs font-bold text-brand hover:text-brand-hover transition">
+          See all results for "{q}" →
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar() {
   const searchPh = useText("nav.searchPlaceholder", "Search deals, products...");
   const { user, logout } = useAuthStore();
@@ -79,54 +129,8 @@ export default function Navbar() {
     navigate(path);
   }
 
-  /* ── Search dropdown (shared between mobile/desktop) ── */
-  const SearchDropdown = () => (
-    showDrop ? (
-      <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-line bg-white shadow-xl overflow-hidden z-50">
-        {matchedCats.length > 0 && (
-          <div>
-            <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted">Categories</p>
-            {matchedCats.map(c => (
-              <button key={c._id} type="button" onClick={() => go("/categories")}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-cream transition">
-                <div className="h-8 w-8 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
-                  {c.image ? <img src={c.image} alt={c.name} className="w-full h-full object-cover" /> : <span className="text-base">📦</span>}
-                </div>
-                <span className="text-sm font-semibold text-ink">{c.name}</span>
-                <span className="ml-auto text-[11px] text-muted">category</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {searchBlocs.length > 0 && (
-          <div>
-            {matchedCats.length > 0 && <div className="border-t border-line mx-3" />}
-            <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted">Products</p>
-            {searchBlocs.slice(0, 5).map(b => (
-              <button key={b._id} type="button" onClick={() => go(`/blocs/${b._id}`)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-cream transition">
-                <img src={b.image} alt={b.title} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-line" />
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">{b.title}</p>
-                  <p className="text-[11px] text-muted">{b.category?.name ?? ""}</p>
-                </div>
-                <span className="shrink-0 text-sm font-bold text-brand">{currency}{formatPrice(b.blocPrice)}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {!hasResults && dq.trim().length >= 2 && (
-          <p className="px-4 py-4 text-sm text-muted">No results for "{dq}"</p>
-        )}
-        {hasResults && (
-          <button type="submit"
-            className="flex w-full items-center justify-center gap-1 border-t border-line bg-cream px-4 py-3 text-xs font-bold text-brand hover:text-brand-hover transition">
-            See all results for "{q}" →
-          </button>
-        )}
-      </div>
-    ) : null
-  );
+  /* SearchDropdown is defined at module scope to avoid re-creating component type on each render */
+  const dropProps = { showDrop, matchedCats, searchBlocs, hasResults, dq, q, currency, go, formatPrice };
 
   return (
     <>
@@ -218,7 +222,7 @@ export default function Navbar() {
               className="w-full rounded-full border border-line bg-cream px-10 py-2 text-sm text-ink placeholder-muted outline-none focus:border-brand"
               autoComplete="off"
             />
-            <SearchDropdown />
+            <SearchDropdown {...dropProps} />
           </div>
         </form>
 
@@ -265,7 +269,7 @@ export default function Navbar() {
                 className="w-full rounded-full border border-line bg-cream px-10 py-2.5 text-sm outline-none focus:border-brand"
                 autoComplete="off"
               />
-              <SearchDropdown />
+              <SearchDropdown {...dropProps} />
             </form>
           </div>
 

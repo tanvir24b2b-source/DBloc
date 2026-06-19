@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
 
 export function signAccessToken(user) {
-  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
+  return jwt.sign(
+    { id: user._id, role: user.role, permissions: user.permissions, tv: user.tokenVersion || 0 },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" }
+  );
 }
 
 export function signRefreshToken(user) {
@@ -15,6 +17,6 @@ export function signRefreshToken(user) {
 export const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
   maxAge: 30 * 24 * 60 * 60 * 1000,
 };

@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema(
     tokenVersion: { type: Number, default: 0 }, // bumped on logout / password change to revoke old refresh tokens
     lastLoginAt: { type: Date },
     lastLoginIP: { type: String },
+    resetOtp:       { type: String, select: false },
+    resetOtpExpiry: { type: Date,   select: false },
   },
   { timestamps: true }
 );

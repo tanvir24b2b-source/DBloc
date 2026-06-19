@@ -13,6 +13,12 @@ export async function register(req, res) {
     return res.status(400).json({ message: "Name, email, and password are required" });
   if (password.length < 8)
     return res.status(400).json({ message: "Password must be at least 8 characters" });
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ message: "Invalid email address" });
+  }
+  if (mobile && !/^01[0-9]{9}$/.test(mobile)) {
+    return res.status(400).json({ message: "Mobile must be an 11-digit Bangladeshi number (01XXXXXXXXX)" });
+  }
 
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) return res.status(409).json({ message: "Email already registered" });
@@ -33,7 +39,7 @@ export async function login(req, res) {
   if (user.banned) return res.status(403).json({ message: "Account banned" });
 
   user.lastLoginAt = new Date();
-  user.lastLoginIP = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  user.lastLoginIP = req.ip || "unknown";
   await user.save({ validateModifiedOnly: true });
 
   const accessToken = signAccessToken(user);
@@ -77,23 +83,49 @@ export async function refresh(req, res) {
   }
 }
 
-// Customer-only password reset. No email service in this setup, so identity is
-// verified by matching email + registered mobile number on a customer account.
+// Step 1: Customer requests OTP — verifies email + mobile ownership before allowing reset.
 export async function forgotPassword(req, res) {
-  const { email, mobile, newPassword } = req.body;
-  if (typeof email !== "string" || typeof mobile !== "string" || typeof newPassword !== "string")
-    return res.status(400).json({ message: "Email, mobile number, and new password are required" });
+  const { email, mobile } = req.body;
+  if (typeof email !== "string" || typeof mobile !== "string")
+    return res.status(400).json({ message: "Email and mobile number are required" });
+
+  const { randomInt } = await import("crypto");
+  // Always generate an OTP (constant-time — don't reveal whether user exists)
+  const otp = String(randomInt(100000, 999999));
+  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  const user = await User.findOne({ email: email.toLowerCase().trim(), role: "user" }).select("+resetOtp +resetOtpExpiry");
+  const mobileMatch = user ? (user.mobile?.trim() === mobile.trim()) : false;
+
+  if (user && mobileMatch) {
+    user.resetOtp = otp;
+    user.resetOtpExpiry = expiry;
+    await user.save({ validateModifiedOnly: true });
+    const { sendSms } = await import("../utils/sms.js");
+    sendSms(mobile, "passwordResetOtp", { otp });
+  }
+
+  // Same response whether or not account exists — prevents enumeration
+  res.json({ message: "If an account with those details exists, an OTP has been sent to your mobile." });
+}
+
+// Step 2: Customer submits OTP + new password.
+export async function resetPasswordWithOtp(req, res) {
+  const { email, otp, newPassword } = req.body;
+  if (typeof email !== "string" || typeof otp !== "string" || typeof newPassword !== "string")
+    return res.status(400).json({ message: "Email, OTP, and new password are required" });
   if (newPassword.length < 8)
     return res.status(400).json({ message: "Password must be at least 8 characters" });
 
-  // Only customers (role "user") can self-reset. Staff/admin accounts are excluded.
-  // Use a consistent error message to prevent email/mobile enumeration.
-  const user = await User.findOne({ email: email.toLowerCase().trim(), role: "user" }).select("+password");
-  if (!user || user.mobile?.trim() !== mobile.trim())
-    return res.status(404).json({ message: "No account matches that email and mobile number" });
+  const user = await User.findOne({ email: email.toLowerCase().trim(), role: "user" }).select("+password +resetOtp +resetOtpExpiry");
+  if (!user || !user.resetOtp || user.resetOtp !== otp.trim() || !user.resetOtpExpiry || user.resetOtpExpiry < new Date()) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
 
   user.password = newPassword;
-  user.tokenVersion = (user.tokenVersion || 0) + 1; // revoke existing sessions
+  user.resetOtp = undefined;
+  user.resetOtpExpiry = undefined;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
   res.json({ message: "Password reset successful. You can now log in." });
 }
@@ -105,7 +137,12 @@ export async function updateProfile(req, res) {
 
   if (name) user.name = xss(name.trim());
   if (email) user.email = email.toLowerCase().trim();
-  if (mobile !== undefined) user.mobile = mobile;
+  if (mobile !== undefined) {
+    if (mobile && !/^01[0-9]{9}$/.test(mobile)) {
+      return res.status(400).json({ message: "Mobile must be an 11-digit Bangladeshi number (01XXXXXXXXX)" });
+    }
+    user.mobile = mobile;
+  }
   if (address !== undefined) user.address = xss(address);
 
   if (newPassword) {

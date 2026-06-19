@@ -15,6 +15,10 @@ export default function ForgotPassword() {
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (form.newPassword.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
     if (form.newPassword !== form.confirm) {
       setError("New passwords do not match.");
       return;
@@ -53,7 +57,7 @@ export default function ForgotPassword() {
             className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
           <input type="tel" required placeholder="Registered mobile number" value={form.mobile} onChange={set("mobile")}
             className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" />
-          <input type="password" required placeholder="New password (min. 6 chars)" value={form.newPassword} onChange={set("newPassword")}
+          <input type="password" required minLength={8} placeholder="New password (min. 8 chars)" value={form.newPassword} onChange={set("newPassword")}
             className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" autoComplete="new-password" />
           <input type="password" required placeholder="Confirm new password" value={form.confirm} onChange={set("confirm")}
             className="w-full rounded-lg border border-line px-4 py-2.5 text-sm outline-none focus:border-brand" autoComplete="new-password" />

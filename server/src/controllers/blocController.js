@@ -25,10 +25,16 @@ function applyRealFill(json, joined) {
 }
 
 export async function listBlocs(req, res) {
-  const { category, status, sort, featured, limit, q } = req.query;
+  const { category, status, sort, featured, limit, page, q } = req.query;
   const filter = {};
   if (category) filter.category = category;
   if (featured === "true") filter.featured = true;
+  // Never show hidden blocs to the public (admin can see them via separate endpoint)
+  filter.hidden = { $ne: true };
+  // Pre-filter expired blocs in DB when status=active is requested, to avoid large memory scans
+  if (status === "active") {
+    filter.endTime = { $gt: new Date() };
+  }
   if (q) {
     const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 100);
     filter.$or = [
@@ -38,13 +44,20 @@ export async function listBlocs(req, res) {
   ];
   }
 
-  let query = Bloc.find(filter).populate("category", "name slug image");
+  let query = Bloc.find(filter).select("-gallery -fullDescription").populate("category", "name slug image");
 
   if (sort === "price") query = query.sort({ blocPrice: 1 });
   else if (sort === "discount") query = query.sort({ createdAt: -1 });
   else query = query.sort({ createdAt: -1 });
 
-  if (limit) query = query.limit(Number(limit));
+  // Pagination: default 50 per page, max 200. Explicit `limit` param overrides page-based pagination.
+  if (limit) {
+    query = query.limit(Math.min(200, Number(limit)));
+  } else {
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const pageSize = 50;
+    query = query.skip((pageNum - 1) * pageSize).limit(pageSize);
+  }
 
   // Return documents (not lean) so virtuals (discount, progress, status) are serialized via toJSON.
   const docs = await query;
@@ -64,7 +77,7 @@ export async function getBloc(req, res) {
   res.json(applyRealFill(bloc.toJSON(), filled[bloc._id.toString()] || 0));
 }
 
-const BLOC_FIELDS = ["title","slug","description","shortDescription","fullDescription","image","gallery","category","tags","relatedProducts","originalPrice","blocPrice","priceTiers","maxSpots","goal","endTime","rating","reviewCount","reviews","sku","featured","hidden","shippingException","variants"];
+const BLOC_FIELDS = ["title","slug","description","shortDescription","fullDescription","image","gallery","category","tags","relatedProducts","originalPrice","blocPrice","priceTiers","maxSpots","goal","endTime","rating","reviewCount","reviews","sku","featured","hidden","shippingException","variants","features"];
 function pickBlocFields(body) {
   return Object.fromEntries(Object.entries(body).filter(([k]) => BLOC_FIELDS.includes(k)));
 }
@@ -115,13 +128,15 @@ export async function importBlocs(req, res) {
     if (!row.maxSpots)              { failed.push({ row: rowNum, title: row.title, reason: "maxSpots is required" }); continue; }
     if (!row.endTime)               { failed.push({ row: rowNum, title: row.title, reason: "endTime is required" }); continue; }
     if (!row.image?.trim())         { failed.push({ row: rowNum, title: row.title, reason: "image (main image URL) is required" }); continue; }
+    const isSafeUrl = (u) => /^https?:\/\//i.test(u);
+    if (!isSafeUrl(row.image.trim())) { failed.push({ row: rowNum, title: row.title, reason: "image URL must start with http:// or https://" }); continue; }
 
     const endDate = new Date(row.endTime);
     if (isNaN(endDate.getTime())) { failed.push({ row: rowNum, title: row.title, reason: "endTime is not a valid date (use YYYY-MM-DD)" }); continue; }
 
-    // Gallery — up to 5
+    // Gallery — up to 5, only safe http(s) URLs
     const gallery = [row.gallery1, row.gallery2, row.gallery3, row.gallery4, row.gallery5]
-      .filter((u) => u?.trim());
+      .filter((u) => u?.trim() && isSafeUrl(u.trim()));
 
     // Category lookup by name
     const catId = row.category ? catMap[row.category.toLowerCase().trim()] : undefined;

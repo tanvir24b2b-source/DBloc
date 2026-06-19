@@ -128,7 +128,7 @@ function StaticPageEditor({ page }) {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="font-bold text-ink">{page.label}</h2>
-            <a href={`http://localhost:5173/${page.slug}`} target="_blank" rel="noreferrer"
+            <a href={`${import.meta.env.VITE_SITE_URL || window.location.origin}/${page.slug}`} target="_blank" rel="noreferrer"
               className="text-xs text-brand hover:underline">
               ↗ View live page: /{page.slug}
             </a>
@@ -203,7 +203,7 @@ export default function ContentEditor() {
   async function save() {
     await api.put(`/content/${editKey}`, { value: editValue });
     setItems((arr) => arr.map((i) => (i.key === editKey ? { ...i, value: editValue } : i)));
-    iframeRef.current?.contentWindow?.postMessage({ type: "cms-updated", key: editKey, value: editValue }, "*");
+    iframeRef.current?.contentWindow?.postMessage({ type: "cms-updated", key: editKey, value: editValue }, window.location.origin);
     setToast("Saved — live site updated");
     setEditKey(null);
     setTimeout(() => setToast(""), 2500);
@@ -211,7 +211,7 @@ export default function ContentEditor() {
 
   function onHeroImageSaved(key, value) {
     setItems((arr) => arr.map((i) => (i.key === key ? { ...i, value } : i)));
-    iframeRef.current?.contentWindow?.postMessage({ type: "cms-updated", key, value }, "*");
+    iframeRef.current?.contentWindow?.postMessage({ type: "cms-updated", key, value }, window.location.origin);
     setToast("Saved — live site updated");
     setTimeout(() => setToast(""), 2500);
   }
