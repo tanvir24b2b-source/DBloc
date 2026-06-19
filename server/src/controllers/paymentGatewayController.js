@@ -8,12 +8,15 @@ const GATEWAY_DEFS = [
   { type: "nagad",        displayName: "Nagad",            sortOrder: 4 },
 ];
 
-// Seed default gateways on first run
+// Seed default gateways on first run, also ensure display names and sort orders are current
 export async function seedGateways() {
   for (const def of GATEWAY_DEFS) {
     await PaymentGateway.updateOne(
       { type: def.type },
-      { $setOnInsert: { ...def, enabled: def.type === "cod", isDefault: def.type === "cod" } },
+      {
+        $set: { displayName: def.displayName, sortOrder: def.sortOrder },
+        $setOnInsert: { enabled: def.type === "cod", isDefault: def.type === "cod" },
+      },
       { upsert: true }
     );
   }

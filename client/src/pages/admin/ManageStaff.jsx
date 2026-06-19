@@ -53,7 +53,7 @@ export default function ManageStaff() {
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["staff"],
-    queryFn: () => api.get("/admin/staff").then((r) => r.data),
+    queryFn: () => api.get("/admin/staff").then((r) => r.data.users ?? r.data),
   });
 
   const createMut = useMutation({
