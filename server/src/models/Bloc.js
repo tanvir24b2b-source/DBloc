@@ -45,6 +45,24 @@ const blocSchema = new mongoose.Schema(
       title: { type: String, default: "" },
       desc:  { type: String, default: "" },
     }],
+
+    // Per-product SEO metadata
+    seo: {
+      metaTitle:       { type: String, default: "" },
+      metaDescription: { type: String, default: "" },
+      keywords:        [{ type: String }],
+      ogImage:         { type: String, default: "" },
+      ogDescription:   { type: String, default: "" },
+      canonicalUrl:    { type: String, default: "" },
+      noindex:         { type: Boolean, default: false },
+      nofollow:        { type: Boolean, default: false },
+      schemaMarkup:    { type: mongoose.Schema.Types.Mixed, default: null },
+    },
+
+    // Featured placement
+    featuredSection:  { type: String, default: "" },   // e.g. "hero", "deals", "homepage"
+    featuredPriority: { type: Number, default: 0 },
+    featuredUntil:    { type: Date, default: null },
   },
   { timestamps: true }
 );

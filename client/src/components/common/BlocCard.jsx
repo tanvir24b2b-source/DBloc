@@ -12,7 +12,7 @@ export default function BlocCard({ bloc }) {
 
   return (
     <div className="group/card flex w-full flex-col overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-      <Link to={`/blocs/${bloc._id}`} className="relative block">
+      <Link to={`/blocs/${bloc.slug || bloc._id}`} className="relative block">
         {discount > 0 && (
           <span className="absolute left-3 top-3 z-10 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white">
             {discount}% OFF
@@ -25,7 +25,7 @@ export default function BlocCard({ bloc }) {
       </Link>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
-        <Link to={`/blocs/${bloc._id}`} className="line-clamp-1 text-sm font-semibold text-ink hover:text-brand">
+        <Link to={`/blocs/${bloc.slug || bloc._id}`} className="line-clamp-1 text-sm font-semibold text-ink hover:text-brand">
           {bloc.title}
         </Link>
 
@@ -42,7 +42,7 @@ export default function BlocCard({ bloc }) {
 
         {bloc.status === "active" ? (
           <Link
-            to={`/blocs/${bloc._id}`}
+            to={`/blocs/${bloc.slug || bloc._id}`}
             className="btn-shine mt-1 rounded-lg bg-ink py-2 text-center text-xs font-bold tracking-wide text-white transition group-hover/card:bg-brand"
           >
             <EditableText keyName="join.detailCta" fallback="JOIN BLOC" />

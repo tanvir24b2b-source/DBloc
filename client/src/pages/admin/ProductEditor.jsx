@@ -94,8 +94,12 @@ function Toggle({ checked, onChange }) {
 // ── defaults ──────────────────────────────────────────────────────────────────
 const defaultEnd = () => new Date(Date.now() + 24 * 3.6e6).toISOString().slice(0, 16);
 
+function toSlug(str) {
+  return str.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
+}
+
 const EMPTY = {
-  title: "", sku: "", description: "", shortDescription: "", fullDescription: "",
+  title: "", slug: "", sku: "", description: "", shortDescription: "", fullDescription: "",
   image: "", gallery: [],
   originalPrice: "", blocPrice: "",
   priceTiers: [
@@ -135,6 +139,8 @@ export default function ProductEditor() {
   });
 
   const [form, setForm] = useState(EMPTY);
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [slugLocked, setSlugLocked] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -154,11 +160,17 @@ export default function ProductEditor() {
         variants: existing.variants || [],
         reviews: existing.reviews || [],
       });
+      setSlugLocked(true);
     }
   }, [existing]);
 
   const set = (k) => (v) => setForm((s) => ({ ...s, [k]: v }));
   const setE = (k) => (e) => set(k)(e.target.type === "checkbox" ? e.target.checked : e.target.value);
+
+  function handleTitleChange(e) {
+    const title = e.target.value;
+    setForm((s) => ({ ...s, title, ...(slugEdited ? {} : { slug: toSlug(title) }) }));
+  }
 
   // Tags
   function addTag(e) {
@@ -293,12 +305,22 @@ export default function ProductEditor() {
             </h1>
             {!isNew && <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-400 font-mono">ID: {id.slice(-6).toUpperCase()}</span>}
           </div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Enterprise Content Management Suite</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">D Bloc Admin</p>
         </div>
         <button type="button" onClick={() => navigate("/admin/products")}
           className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50">
           CANCEL
         </button>
+        {!isNew && form.slug && (
+          <a
+            href={`/blocs/${form.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-brand px-4 py-2 text-xs font-bold text-brand hover:bg-orange-50 transition"
+          >
+            VISIT →
+          </a>
+        )}
         <button type="button" onClick={handleSave} disabled={saving}
           className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2 text-xs font-bold text-white hover:bg-black disabled:opacity-60">
           <span>💾</span>
@@ -306,8 +328,18 @@ export default function ProductEditor() {
         </button>
       </div>
       {saved && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg">
-          ✓ Product saved successfully
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg">
+          <span>✓ Product saved successfully</span>
+          {form.slug && (
+            <a
+              href={`/blocs/${form.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white hover:bg-white/30 transition"
+            >
+              VISIT →
+            </a>
+          )}
         </div>
       )}
 
@@ -319,7 +351,37 @@ export default function ProductEditor() {
           <Section num={1} title="Basic Information">
             <div className="space-y-4">
               <Field label="Product Title *">
-                <input value={form.title} onChange={setE("title")} placeholder="e.g. Pro Wireless Soundbar" className={INPUT} required />
+                <input value={form.title} onChange={handleTitleChange} placeholder="e.g. Pro Wireless Soundbar" className={INPUT} required />
+              </Field>
+              <Field label="URL Slug" hint="Used in the product page URL">
+                <div className={`flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm transition ${slugLocked ? "border-gray-200 bg-gray-50" : "border-brand focus-within:border-brand"}`}>
+                  <span className="shrink-0 text-gray-400 text-xs">/blocs/</span>
+                  {slugLocked ? (
+                    <a
+                      href={`/blocs/${form.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 text-brand underline underline-offset-2 text-sm truncate"
+                    >
+                      {form.slug || <span className="text-gray-400 no-underline">not set</span>}
+                    </a>
+                  ) : (
+                    <input
+                      value={form.slug}
+                      onChange={(e) => { setSlugEdited(true); set("slug")(toSlug(e.target.value)); }}
+                      placeholder="product-name-here"
+                      className="flex-1 outline-none bg-transparent text-gray-900"
+                      autoFocus
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSlugLocked((v) => !v)}
+                    className="shrink-0 rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition"
+                  >
+                    {slugLocked ? "Edit" : "Lock"}
+                  </button>
+                </div>
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="SKU Identifier">
