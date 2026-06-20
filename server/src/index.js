@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -110,6 +112,15 @@ const mcpLimiter = rateLimit({
 app.get("/robots.txt", (req, res, next) => getRobots(req, res, next).catch(next));
 app.post("/mcp", mcpLimiter, (req, res, next) => mcpHandler(req, res, next).catch(next));
 
+// Serve React frontend static files in production
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const clientDist = join(__dirname, "../../../client/dist");
+app.use(express.static(clientDist));
+app.get("*", (req, res) => {
+  res.sendFile(join(clientDist, "index.html"));
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
@@ -124,3 +135,4 @@ connectDB()
     syncCourierStatuses(null, null).catch(() => {});
     setInterval(() => syncCourierStatuses(null, null).catch(() => {}), 60 * 60 * 1000);
   });
+
