@@ -1,0 +1,12 @@
+Options -MultiViews
+RewriteEngine On
+
+# Let existing files and directories be served directly (JS, CSS, images)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Don't rewrite API calls — Passenger routes them to Node.js
+RewriteCond %{REQUEST_URI} !^/api
+
+# All other routes (React Router: /admin, /blocs, etc.) → index.html
+RewriteRule ^ index.html [L]
