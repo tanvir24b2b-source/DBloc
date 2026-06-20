@@ -71,7 +71,9 @@ export async function listBlocs(req, res) {
 }
 
 export async function getBloc(req, res) {
-  const bloc = await Bloc.findById(req.params.id).populate("category", "name slug");
+  const { id } = req.params;
+  const filter = id.match(/^[a-f\d]{24}$/i) ? { _id: id } : { slug: id };
+  const bloc = await Bloc.findOne(filter).populate("category", "name slug");
   if (!bloc) return res.status(404).json({ message: "Bloc not found" });
   const filled = await realFilledMap([bloc._id]);
   res.json(applyRealFill(bloc.toJSON(), filled[bloc._id.toString()] || 0));
