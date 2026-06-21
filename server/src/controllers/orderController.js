@@ -202,7 +202,7 @@ export async function recentBlocOrders(req, res) {
   };
 
   res.json(orders.map((o) => ({
-    name: o.customerName?.split(" ")[0] + " " + (o.customerName?.split(" ")[1]?.[0] || "") + ".",
+    name: o.customerName || "Someone",
     phone: mask(o.mobile),
     time: ago(o.createdAt),
   })));
