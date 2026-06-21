@@ -52,7 +52,9 @@ app.use(
 );
 app.use((req, res, next) => {
   // Admin image uploads (base64) need a larger body; everything else stays small
-  const isImageUpload = req.method === "PUT" && /^\/api\/content\//.test(req.path);
+  const isImageUpload =
+    (req.method === "PUT" && /^\/api\/content\//.test(req.path)) ||
+    (req.method === "POST" && /^\/api\/content\/bulk/.test(req.path));
   express.json({ limit: isImageUpload ? "10mb" : "200kb" })(req, res, next);
 });
 app.use(cookieParser());
