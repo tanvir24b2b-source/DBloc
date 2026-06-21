@@ -9,6 +9,7 @@ import JoinModal from "../components/bloc/JoinModal.jsx";
 import EditableText from "../components/common/EditableText.jsx";
 import BlocCarousel from "../components/common/BlocCarousel.jsx";
 import SeoHead from "../components/common/SeoHead.jsx";
+import LoadingScreen from "../components/common/LoadingScreen.jsx";
 import api from "../lib/api.js";
 
 /* ---------- small helpers ---------- */
@@ -101,14 +102,15 @@ export default function BlocDetail() {
   }, [bloc]);
 
   // Real recent orders for this bloc — refreshes every 30s
+  // Must use bloc._id (not slug) because the backend validates ObjectId
   const { data: recentActivity = [] } = useQuery({
-    queryKey: ["bloc-recent", id],
-    queryFn: () => api.get(`/orders/bloc/${id}/recent`).then((r) => r.data),
-    enabled: !!id,
+    queryKey: ["bloc-recent", bloc?._id],
+    queryFn: () => api.get(`/orders/bloc/${bloc._id}/recent`).then((r) => r.data),
+    enabled: !!bloc?._id,
     refetchInterval: 30000,
   });
 
-  if (isLoading) return <p className="p-16 text-center text-muted">Loading...</p>;
+  if (isLoading) return <LoadingScreen />;
   if (!bloc) return <p className="p-16 text-center text-muted">Bloc not found.</p>;
 
   const seoTitle = `${bloc.title} — D BLOC Group Buy`;
@@ -266,71 +268,81 @@ export default function BlocDetail() {
         </div>
       </div>
 
-      {/* ===== Participation ===== */}
-      <Section>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-2xl font-extrabold text-ink">{joined} joined</p>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.participationLabel" fallback="Current Participation" /></p>
-          </div>
-          {moreNeeded > 0 ? (
-            <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">🎯 Only {moreNeeded} more needed</span>
-          ) : (
-            <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success">✓ Wholesale unlocked</span>
-          )}
-        </div>
+      {/* ===== Participation + Bloc Deal Price (side by side on desktop) ===== */}
+      <div className="grid gap-5 md:grid-cols-2">
 
-        <div className="mt-5 space-y-4">
-          <div>
-            <div className="mb-1 flex justify-between text-xs font-semibold">
-              <span className="text-ink"><EditableText keyName="bloc.unlockLabel" fallback="Unlock Progress" /></span>
-              <span className="text-muted">{joined} / {unlockGoal} to goal</span>
+        {/* Left: Participation */}
+        <Section>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-2xl font-extrabold text-ink">{joined} joined</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.participationLabel" fallback="Current Participation" /></p>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-brand" style={{ width: `${unlockPct}%` }} /></div>
+            {moreNeeded > 0 ? (
+              <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">🎯 Only {moreNeeded} more needed</span>
+            ) : (
+              <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success">✓ Unlocked</span>
+            )}
           </div>
-          <div>
-            <div className="mb-1 flex justify-between text-xs font-semibold">
-              <span className="text-ink"><EditableText keyName="bloc.capacityLabel" fallback="Capacity Status" /></span>
-              <span className="text-muted">{capacityPct}% filled</span>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <div className="mb-1 flex justify-between text-xs font-semibold">
+                <span className="text-ink"><EditableText keyName="bloc.unlockLabel" fallback="Unlock Progress" /></span>
+                <span className="text-muted">{joined} / {unlockGoal} to goal</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-brand" style={{ width: `${unlockPct}%` }} /></div>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-ink" style={{ width: `${capacityPct}%` }} /></div>
-          </div>
-        </div>
-
-        <div className="mt-5 flex justify-between border-t border-line pt-4 text-sm">
-          <div><p className="font-bold text-ink">{unlockGoal} Units</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Min. Required</p></div>
-          <div className="text-right"><p className="font-bold text-ink">{spotsLeft} Available</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Remaining Spots</p></div>
-        </div>
-      </Section>
-
-      {/* ===== Pricing tiers + quantity ===== */}
-      <Section>
-        <h2 className="flex items-center gap-2 text-base font-bold text-ink"><span className="text-brand">{currency}</span> <EditableText keyName="bloc.tiersTitle" fallback="Pricing Tiers" /></h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {tiers.map((tier, i) => (
-            <div key={i} className={`relative rounded-xl border p-4 text-center ${tier.best ? "border-brand bg-brand/[0.04]" : "border-line"}`}>
-              {tier.best && <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold text-white">BEST PRICE</span>}
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">{tier.range}</p>
-              <p className={`mt-1 text-xl font-extrabold ${tier.best ? "text-brand" : "text-ink"}`}>{currency}{formatPrice(tier.price)}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-5 flex items-center justify-between rounded-xl border border-line bg-cream p-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.qtyLabel" fallback="Select Quantity" /></p>
-            <div className="mt-1 flex items-center gap-3">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-lg font-bold hover:border-brand">−</button>
-              <span className="w-8 text-center text-lg font-bold">{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} className="grid h-9 w-9 place-items-center rounded-lg border border-line bg-white text-lg font-bold hover:border-brand">+</button>
+            <div>
+              <div className="mb-1 flex justify-between text-xs font-semibold">
+                <span className="text-ink"><EditableText keyName="bloc.capacityLabel" fallback="Capacity Status" /></span>
+                <span className="text-muted">{capacityPct}% filled</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-ink" style={{ width: `${capacityPct}%` }} /></div>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.totalLabel" fallback="Bloc Total" /></p>
-            <p className="text-2xl font-extrabold text-brand">{currency}{formatPrice(total)}</p>
+
+          <div className="mt-4 flex justify-between border-t border-line pt-3 text-sm">
+            <div><p className="font-bold text-ink">{unlockGoal} Units</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Min. Required</p></div>
+            <div className="text-right"><p className="font-bold text-ink">{spotsLeft} Available</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Remaining Spots</p></div>
           </div>
-        </div>
-      </Section>
+        </Section>
+
+        {/* Right: Bloc Deal Price */}
+        <Section>
+          <h2 className="flex items-center gap-2 text-base font-bold text-success">
+            <span>🏷️</span>
+            <EditableText keyName="bloc.tiersTitle" fallback="Lowest Price Achieved" />
+          </h2>
+
+          {/* Single price card with green glow */}
+          <div className="relative mt-4 rounded-xl border border-success/40 bg-white p-5 shadow-[0_0_18px_2px_rgba(34,197,94,0.15)] animate-pulse-glow-green">
+            <div className="flex items-end gap-3">
+              <p className="text-3xl font-extrabold text-success">{currency}{formatPrice(bloc.blocPrice)}</p>
+              <p className="mb-1 text-sm font-semibold text-danger line-through">{currency}{formatPrice(bloc.originalPrice)}</p>
+            </div>
+            <p className="mt-1 text-xs font-semibold text-success">✓ You Save {currency}{formatPrice(save)} · {discount}% off</p>
+            <p className="mt-2 text-[11px] text-muted">Everyone pays this price once the bloc fills</p>
+          </div>
+
+          {/* Quantity + Total */}
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-cream px-4 py-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.qtyLabel" fallback="Select Quantity" /></p>
+              <div className="mt-1 flex items-center gap-3">
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-lg font-bold hover:border-brand">−</button>
+                <span className="w-8 text-center text-base font-bold">{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-lg font-bold hover:border-brand">+</button>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.totalLabel" fallback="Bloc Total" /></p>
+              <p className="text-xl font-extrabold text-brand">{currency}{formatPrice(total)}</p>
+            </div>
+          </div>
+        </Section>
+
+      </div>
 
       {/* ===== Recent Joins + Delivery side by side ===== */}
       <Section className="!p-0 overflow-hidden">
@@ -348,7 +360,7 @@ export default function BlocDetail() {
               {recentActivity.map((r, i) => (
                 <div key={i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
                   <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                  <span className="flex-1 text-sm font-semibold text-ink">{r.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
                   <span className="font-mono text-xs text-muted">{r.phone}</span>
                   <span className="text-[10px] text-muted">{r.time}</span>
                 </div>
@@ -414,11 +426,32 @@ export default function BlocDetail() {
         </div>
       </Section>
 
+      {/* ===== Product Details ===== */}
+      {bloc.fullDescription && (
+        <Section>
+          <h2 className="flex items-center gap-2 text-base font-bold text-ink">📋 <EditableText keyName="bloc.detailsTitle" fallback="Product Details" /></h2>
+          <p className="mt-3 text-sm leading-relaxed text-ink whitespace-pre-wrap">{bloc.fullDescription}</p>
+        </Section>
+      )}
+
       {/* Trust badges */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[["🛡", "Secure Payment"], ["✓", "Verified Product"], ["↺", "Easy Refund"], ["🚚", "Fast Delivery"]].map(([icon, label]) => (
-          <div key={label} className="flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm font-semibold text-ink"><span>{icon}</span> {label}</div>
-        ))}
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-3 text-xs font-semibold text-green-800">
+          <span className="text-base">💳</span>
+          <EditableText keyName="bloc.badge1" fallback="Secure Payment" />
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-3 text-xs font-semibold text-green-800">
+          <span className="text-base">✅</span>
+          <EditableText keyName="bloc.badge2" fallback="Verified Product" />
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-xs font-semibold text-blue-800">
+          <span className="text-base">🔄</span>
+          <EditableText keyName="bloc.badge3" fallback="7 Days Replacement" />
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-3 text-xs font-semibold text-orange-800">
+          <span className="text-base">🏠</span>
+          <EditableText keyName="bloc.badge4" fallback="Home Delivery" />
+        </div>
       </div>
 
       {/* More deals */}
@@ -430,22 +463,46 @@ export default function BlocDetail() {
         </div>
       )}
 
-      {/* ===== Sticky join bar — pops up when top button is gone & scrolling stopped ===== */}
+      {/* ===== Sticky join bar ===== */}
       <div
         className={`fixed inset-x-0 bottom-0 z-30 transition-transform duration-300 ease-out ${stickyVisible ? "translate-y-0" : "translate-y-full"}`}
       >
-        <div className="mx-auto mb-3 flex max-w-3xl items-center justify-between gap-4 rounded-2xl border border-line bg-white px-5 py-3 shadow-2xl">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Ends In</p>
-            <p className="flex items-center gap-1.5 text-2xl font-extrabold tabular-nums text-brand">
-              <span className="h-2 w-2 animate-dot-pulse rounded-full bg-brand" />
-              {pad(t.h + t.d * 24)}:{pad(t.m)}:{pad(t.s)}
-            </p>
+        <div className="mx-auto mb-3 flex max-w-3xl items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-2xl sm:px-5">
+          {/* Left: ENDS IN + flip blocks */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-muted leading-none">Ends In</p>
+            <div className="flex items-center gap-1">
+              {/* Day */}
+              <div className="flex flex-col items-center justify-between rounded-lg border border-line bg-white shadow-sm w-9 h-9 pt-1 pb-0.5">
+                <span key={`d-${t.d}`} className="animate-flip-tick text-sm font-extrabold tabular-nums text-ink leading-none">{pad(t.d)}</span>
+                <span className="text-[7px] font-bold uppercase tracking-widest text-muted leading-none">day</span>
+              </div>
+              <span className="text-base font-extrabold text-brand pb-3">:</span>
+              {/* Hr */}
+              <div className="flex flex-col items-center justify-between rounded-lg border border-line bg-white shadow-sm w-9 h-9 pt-1 pb-0.5">
+                <span key={`h-${t.h}`} className="animate-flip-tick text-sm font-extrabold tabular-nums text-ink leading-none">{pad(t.h)}</span>
+                <span className="text-[7px] font-bold uppercase tracking-widest text-muted leading-none">hrs</span>
+              </div>
+              <span className="text-base font-extrabold text-brand pb-3">:</span>
+              {/* Min */}
+              <div className="flex flex-col items-center justify-between rounded-lg border border-line bg-white shadow-sm w-9 h-9 pt-1 pb-0.5">
+                <span key={`m-${t.m}`} className="animate-flip-tick text-sm font-extrabold tabular-nums text-ink leading-none">{pad(t.m)}</span>
+                <span className="text-[7px] font-bold uppercase tracking-widest text-muted leading-none">min</span>
+              </div>
+              <span className="text-base font-extrabold text-brand pb-3">:</span>
+              {/* Sec */}
+              <div className="flex flex-col items-center justify-between rounded-lg border border-line bg-white shadow-sm w-9 h-9 pt-1 pb-0.5">
+                <span key={`s-${t.s}`} className="animate-flip-tick text-sm font-extrabold tabular-nums text-ink leading-none">{pad(t.s)}</span>
+                <span className="text-[7px] font-bold uppercase tracking-widest text-muted leading-none">sec</span>
+              </div>
+            </div>
           </div>
+
+          {/* Right: CTA button — vertically centered */}
           <button
             onClick={() => setShowModal(true)}
             disabled={bloc.status !== "active"}
-            className="btn-shine rounded-xl bg-brand px-8 py-3.5 text-sm font-bold tracking-wide text-white shadow-lg shadow-brand/40 transition hover:bg-brand-hover disabled:bg-muted disabled:shadow-none"
+            className="btn-shine shrink-0 rounded-xl bg-brand px-5 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-brand/40 transition hover:bg-brand-hover disabled:bg-muted disabled:shadow-none"
           >
             {joinLabel} →
           </button>

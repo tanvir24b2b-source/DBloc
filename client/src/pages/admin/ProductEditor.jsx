@@ -143,6 +143,7 @@ export default function ProductEditor() {
   const [slugLocked, setSlugLocked] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [relSearch, setRelSearch] = useState("");
   const [galleryUrl, setGalleryUrl] = useState("");
@@ -259,26 +260,31 @@ export default function ProductEditor() {
   async function handleSave(e) {
     e?.preventDefault();
     setSaving(true);
-    const { filledSpots: _ignored, ...rest } = form; // never overwrite join count from editor
+    setSaveError("");
+    const { filledSpots: _ignored, ...rest } = form;
     const payload = {
       ...rest,
       originalPrice: Number(form.originalPrice),
       blocPrice: Number(form.blocPrice),
       maxSpots: Number(form.maxSpots),
       goal: Number(form.goal) || Math.round(Number(form.maxSpots) * 0.5),
-      ...(isNew ? { filledSpots: 0 } : {}), // new products always start at 0
-      priceTiers: form.priceTiers.map((t) => ({ ...t, price: Number(t.price), min: Number(t.min) })),
+      ...(isNew ? { filledSpots: 0 } : {}),
+      priceTiers: (form.priceTiers || []).map((t) => ({ ...t, price: Number(t.price), min: Number(t.min) })),
     };
     if (!payload.endTime) payload.endTime = new Date(Date.now() + 24 * 3.6e6).toISOString();
+    if (!payload.category) delete payload.category;
     try {
       if (isNew) await api.post("/blocs", payload);
-      else await api.put(`/blocs/${id}`, payload);
+      else await api.put(`/blocs/${existing._id}`, payload);
       qc.invalidateQueries({ queryKey: ["admin-products"] });
       qc.invalidateQueries({ queryKey: ["admin-blocs"] });
       qc.invalidateQueries({ queryKey: ["blocs"] });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       if (isNew) navigate("/admin/products");
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || "Save failed";
+      setSaveError(msg);
     } finally {
       setSaving(false);
     }
@@ -327,6 +333,12 @@ export default function ProductEditor() {
           {saving ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </div>
+      {saveError && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white shadow-lg">
+          <span>❌ Save failed: {saveError}</span>
+          <button onClick={() => setSaveError("")} className="ml-2 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
       {saved && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg">
           <span>✓ Product saved successfully</span>
@@ -518,34 +530,6 @@ export default function ProductEditor() {
               </div>
             </div>
 
-            {/* Price tiers */}
-            <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Volume Tiers</p>
-                <button type="button" onClick={addTier} className="text-[10px] font-bold text-brand hover:underline">+ Add Tier</button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {form.priceTiers.map((tier, i) => (
-                  <div key={i} className="relative rounded-xl border border-gray-200 p-3">
-                    <button type="button" onClick={() => removeTier(i)}
-                      className="absolute right-2 top-2 text-xs text-gray-300 hover:text-red-400">×</button>
-                    <div className="mb-2 flex gap-1 text-[10px]">
-                      <input type="number" value={tier.min} onChange={(e) => setTier(i, "min", e.target.value)}
-                        className="w-12 rounded-lg border border-gray-200 px-2 py-1 text-center text-xs outline-none focus:border-brand" placeholder="min" />
-                      <span className="text-gray-400 self-center">–</span>
-                      <input type="number" value={tier.max ?? ""} onChange={(e) => setTier(i, "max", e.target.value || null)}
-                        placeholder="∞" className="w-12 rounded-lg border border-gray-200 px-2 py-1 text-center text-xs outline-none focus:border-brand" />
-                      <span className="text-gray-400 self-center text-[9px]">UNITS</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-400">৳</span>
-                      <input type="number" value={tier.price} onChange={(e) => setTier(i, "price", e.target.value)}
-                        placeholder="0" className="flex-1 text-lg font-extrabold text-gray-700 border-0 bg-transparent outline-none" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </Section>
 
           {/* 05 Variants */}

@@ -280,7 +280,7 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity: initialQ
 
           {error && <p className="text-sm text-danger">{error}</p>}
 
-          <button disabled={loading} className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-60">
+          <button disabled={loading} className="w-full rounded-full bg-brand py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-60">
             {loading ? "Processing..." : ctaText}
           </button>
         </form>

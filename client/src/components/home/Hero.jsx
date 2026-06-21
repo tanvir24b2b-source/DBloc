@@ -104,7 +104,7 @@ function MiniCard({ top, t, spotsLeft, currency }) {
 
   const handleClick = (e) => {
     e.preventDefault();
-    launchZoom(e.currentTarget, navigate, `/blocs/${top._id}`);
+    launchZoom(e.currentTarget, navigate, `/blocs/${top.slug || top._id}`);
   };
 
   return (
@@ -113,7 +113,7 @@ function MiniCard({ top, t, spotsLeft, currency }) {
         DEAL OF THE DAY
       </p>
       <Link
-        to={`/blocs/${top._id}`}
+        to={`/blocs/${top.slug || top._id}`}
         onClick={handleClick}
         className="group block overflow-hidden rounded-2xl bg-white text-ink shadow-2xl transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(0,0,0,0.25)]"
       >
@@ -144,7 +144,7 @@ function MiniCard({ top, t, spotsLeft, currency }) {
             </div>
           </div>
           <div className="btn-shine mt-2 w-full rounded-lg bg-ink py-1.5 text-center text-[11px] font-bold tracking-wide text-white transition-colors duration-200 group-hover:bg-brand">
-            JOIN BLOC
+            <EditableText keyName="join.detailCta" fallback="JOIN THIS BLOC" />
           </div>
         </div>
       </Link>

@@ -402,6 +402,7 @@ function OrderEditPanel({ order, onClose, onUpdated }) {
 export default function ManageOrders() {
   const qc = useQueryClient();
   const [search, setSearch]       = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("pending");
   const [updating, setUpdating]   = useState({});
   const [selectedOrder, setSelectedOrder] = useState(null);
 
@@ -428,25 +429,67 @@ export default function ManageOrders() {
     setSelectedOrder((prev) => prev?._id === updated._id ? { ...prev, ...updated } : prev);
   }
 
-  const filtered = orders.filter((o) => {
-    const q = search.toLowerCase();
-    return (
-      o.orderId?.toLowerCase().includes(q) ||
-      o.mobile?.toLowerCase().includes(q) ||
-      o.customerName?.toLowerCase().includes(q) ||
-      o.bloc?.title?.toLowerCase().includes(q)
-    );
-  });
+  // Count orders by status
+  const statusCounts = {
+    pending: orders.filter((o) => o.status === "pending").length,
+    confirmed: orders.filter((o) => o.status === "confirmed").length,
+    processing: orders.filter((o) => o.status === "processing").length,
+    shipped: orders.filter((o) => o.status === "shipped").length,
+    delivered: orders.filter((o) => o.status === "delivered").length,
+    cancelled: orders.filter((o) => o.status === "cancelled").length,
+  };
+
+  // Filter by selected status first, then by search
+  const filtered = orders
+    .filter((o) => o.status === selectedStatus)
+    .filter((o) => {
+      const q = search.toLowerCase();
+      return (
+        o.orderId?.toLowerCase().includes(q) ||
+        o.mobile?.toLowerCase().includes(q) ||
+        o.customerName?.toLowerCase().includes(q) ||
+        o.bloc?.title?.toLowerCase().includes(q)
+      );
+    });
 
   function statusOptions(current) {
     const shipped = ["shipped", "delivered", "pending_return", "returned"].includes(current);
     return shipped ? ["shipped", ...POST_SHIP, "delivered"] : PRE_SHIP;
   }
 
+  const statusTabs = [
+    { key: "pending", label: "Pending", count: statusCounts.pending },
+    { key: "confirmed", label: "Confirmed", count: statusCounts.confirmed },
+    { key: "processing", label: "Processing", count: statusCounts.processing },
+    { key: "shipped", label: "Shipped", count: statusCounts.shipped },
+    { key: "delivered", label: "Delivered", count: statusCounts.delivered },
+    { key: "cancelled", label: "Cancelled", count: statusCounts.cancelled },
+  ];
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-ink">Orders</h1>
 
+      {/* Status Tabs */}
+      <div className="mt-4 rounded-xl border border-line bg-white p-3 overflow-x-auto">
+        <div className="flex gap-2 min-w-min">
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setSelectedStatus(tab.key)}
+              className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                selectedStatus === tab.key
+                  ? "bg-brand text-white"
+                  : "bg-cream text-ink hover:bg-gray-200"
+              }`}
+            >
+              {tab.label} {tab.count}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search */}
       <div className="mt-4 rounded-xl border border-line bg-white p-3">
         <div className="flex items-center gap-2">
           <span className="text-lg text-muted">⌕</span>

@@ -19,8 +19,8 @@ export default function BlocCard({ bloc }) {
           </span>
         )}
         <img src={bloc.image} alt={bloc.title} className="aspect-square w-full object-cover" />
-        <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white">
-          ⏱ <CountdownTimer endTime={bloc.endTime} className="text-[11px]" />
+        <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <CountdownTimer endTime={bloc.endTime} className="text-[11px] tracking-wide" compact />
         </span>
       </Link>
 

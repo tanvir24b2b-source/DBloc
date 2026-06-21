@@ -5,6 +5,7 @@ import { useAuthStore } from "./store/useAuthStore.js";
 import Layout from "./components/common/Layout.jsx";
 import RequireAdmin from "./components/admin/RequireAdmin.jsx";
 import AdminLayout from "./components/admin/AdminLayout.jsx";
+import LoadingScreen from "./components/common/LoadingScreen.jsx";
 
 const Home = lazy(() => import("./pages/Home.jsx"));
 const AllBlocs = lazy(() => import("./pages/AllBlocs.jsx"));
@@ -38,18 +39,12 @@ const ManageEmail = lazy(() => import("./pages/admin/ManageEmail.jsx"));
 const ManageIntegrations = lazy(() => import("./pages/admin/ManageIntegrations.jsx"));
 const ManageCouriers = lazy(() => import("./pages/admin/ManageCouriers.jsx"));
 
-const PageLoader = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
-  </div>
-);
-
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* Storefront */}
         <Route element={<Layout />}>

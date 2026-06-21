@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCountdown, pad } from "../../lib/format.js";
 
-export default function CountdownTimer({ endTime, className = "", dark = false }) {
+export default function CountdownTimer({ endTime, className = "", compact = false }) {
   const [t, setT] = useState(getCountdown(endTime));
 
   useEffect(() => {
@@ -13,17 +13,21 @@ export default function CountdownTimer({ endTime, className = "", dark = false }
     return <span className={`font-semibold text-danger ${className}`}>Expired</span>;
   }
 
-  const cell = dark
-    ? "bg-dark text-white"
-    : "bg-ink/90 text-white";
+  if (compact) {
+    return (
+      <span className={`font-bold tabular-nums ${className}`}>
+        <span key={`h-${t.h}`} className="animate-flip-tick inline-block">{pad(t.h)}</span>
+        <span className="opacity-60">:</span>
+        <span key={`m-${t.m}`} className="animate-flip-tick inline-block">{pad(t.m)}</span>
+        <span className="opacity-60">:</span>
+        <span key={`s-${t.s}`} className="animate-flip-tick inline-block">{pad(t.s)}</span>
+      </span>
+    );
+  }
 
   return (
-    <div className={`flex items-center gap-1 font-bold tabular-nums ${className}`}>
-      <span key={`h-${t.h}`} className={`${cell} rounded px-1.5 py-0.5 animate-flip-tick`}>{pad(t.h)}</span>
-      <span className="text-danger">:</span>
-      <span key={`m-${t.m}`} className={`${cell} rounded px-1.5 py-0.5 animate-flip-tick`}>{pad(t.m)}</span>
-      <span className="text-danger">:</span>
-      <span key={`s-${t.s}`} className={`${cell} rounded px-1.5 py-0.5 animate-flip-tick`}>{pad(t.s)}</span>
-    </div>
+    <span className={`font-bold tabular-nums text-sm sm:text-base ${className}`}>
+      {t.d}d {pad(t.h)}h {pad(t.m)}m {pad(t.s)}s
+    </span>
   );
 }
