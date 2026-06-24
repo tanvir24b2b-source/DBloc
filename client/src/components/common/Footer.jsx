@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useText } from "../../store/ContentContext.jsx";
 import EditableText from "./EditableText.jsx";
 import Logo from "./Logo.jsx";
+import { SocialIconSvg } from "../../lib/socialIcons.jsx";
 
 // Maps footer link label → internal route
 const LINK_ROUTES = {
@@ -63,9 +64,11 @@ export default function Footer() {
       {allSocialLinks.map((l, i) => (
         <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" title={l.label || ""}
           className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white overflow-hidden hover:border-brand transition">
-          {l.icon
-            ? <img src={l.icon} alt={l.label || ""} className="h-4 w-4 object-contain" />
-            : <span className="text-xs font-bold text-muted">{(l.label || "?").slice(0, 2)}</span>}
+          {l.iconKey
+            ? <SocialIconSvg iconKey={l.iconKey} variant={l.variant || "black-on-white"} size={18} />
+            : l.icon
+              ? <img src={l.icon} alt={l.label || ""} className="h-4 w-4 object-contain" />
+              : <span className="text-xs font-bold text-muted">{(l.label || "?").slice(0, 2)}</span>}
         </a>
       ))}
     </div>

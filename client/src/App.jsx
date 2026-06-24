@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore.js";
+import api from "./lib/api.js";
 
 import Layout from "./components/common/Layout.jsx";
 import RequireAdmin from "./components/admin/RequireAdmin.jsx";
@@ -42,6 +43,13 @@ const ManageCouriers = lazy(() => import("./pages/admin/ManageCouriers.jsx"));
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
   useEffect(() => { fetchMe(); }, [fetchMe]);
+
+  // Keep Render backend awake — ping every 10 minutes
+  useEffect(() => {
+    const ping = () => api.get("/health").catch(() => {});
+    const id = setInterval(ping, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <Suspense fallback={<LoadingScreen />}>

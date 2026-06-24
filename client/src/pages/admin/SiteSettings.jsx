@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../../lib/api.js";
+import { SOCIAL_ICON_DEFS, SocialIconSvg } from "../../lib/socialIcons.jsx";
 
 function ImageUploadField({ value, onChange }) {
   const fileRef = useRef();
@@ -52,7 +53,7 @@ function ImageUploadField({ value, onChange }) {
 }
 
 function SocialLinksEditor({ value, onChange }) {
-  const fileRefs = useRef({});
+  const [openPicker, setOpenPicker] = useState(null); // idx of link whose picker is open
   let links = [];
   try { links = JSON.parse(value || "[]"); } catch { links = []; }
 
@@ -62,59 +63,87 @@ function SocialLinksEditor({ value, onChange }) {
   }
 
   function add() {
-    onChange(JSON.stringify([...links, { icon: "", url: "", label: "" }]));
+    onChange(JSON.stringify([...links, { iconKey: "", variant: "black-on-white", url: "", label: "" }]));
   }
 
   function remove(idx) {
     onChange(JSON.stringify(links.filter((_, i) => i !== idx)));
+    if (openPicker === idx) setOpenPicker(null);
   }
 
-  function pickIcon(idx, e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => update(idx, "icon", ev.target.result);
-    reader.readAsDataURL(file);
-    e.target.value = "";
+  function selectIcon(idx, iconKey, variant) {
+    const next = links.map((l, i) => i === idx ? { ...l, iconKey, variant } : l);
+    onChange(JSON.stringify(next));
+    setOpenPicker(null);
   }
 
   return (
     <div className="space-y-3">
       {links.map((link, idx) => (
-        <div key={idx} className="flex items-center gap-3 rounded-xl border border-line bg-cream px-3 py-3">
-          {/* Icon upload */}
-          <div
-            onClick={() => fileRefs.current[idx]?.click()}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-line bg-white transition hover:border-brand"
-            title="Click to upload icon"
-          >
-            {link.icon
-              ? <img src={link.icon} alt="icon" className="h-full w-full object-contain" />
-              : <span className="text-[10px] text-muted text-center leading-tight">icon</span>}
+        <div key={idx} className="rounded-xl border border-line bg-cream p-3 space-y-2">
+          <div className="flex items-center gap-3">
+            {/* Icon preview / picker toggle */}
+            <button
+              type="button"
+              onClick={() => setOpenPicker(openPicker === idx ? null : idx)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-line bg-white hover:border-brand transition overflow-hidden"
+              title="Pick icon"
+            >
+              {link.iconKey
+                ? <SocialIconSvg iconKey={link.iconKey} variant={link.variant} size={20} />
+                : <span className="text-[9px] text-muted text-center leading-tight">pick icon</span>}
+            </button>
+
+            {/* Label */}
+            <input
+              value={link.label || ""}
+              onChange={(e) => update(idx, "label", e.target.value)}
+              placeholder="Label (e.g. Facebook)"
+              className="w-28 shrink-0 rounded-lg border border-line bg-white px-2 py-1.5 text-xs"
+            />
+
+            {/* URL */}
+            <input
+              value={link.url || ""}
+              onChange={(e) => update(idx, "url", e.target.value)}
+              placeholder="https://..."
+              className="flex-1 rounded-lg border border-line bg-white px-2 py-1.5 text-xs"
+            />
+
+            <button type="button" onClick={() => remove(idx)} className="shrink-0 text-danger hover:text-red-700 text-lg leading-none">×</button>
           </div>
-          <input
-            ref={el => fileRefs.current[idx] = el}
-            type="file" accept="image/*" className="hidden"
-            onChange={(e) => pickIcon(idx, e)}
-          />
 
-          {/* Label */}
-          <input
-            value={link.label || ""}
-            onChange={(e) => update(idx, "label", e.target.value)}
-            placeholder="Label (e.g. Facebook)"
-            className="w-28 shrink-0 rounded-lg border border-line bg-white px-2 py-1.5 text-xs"
-          />
-
-          {/* URL */}
-          <input
-            value={link.url || ""}
-            onChange={(e) => update(idx, "url", e.target.value)}
-            placeholder="https://..."
-            className="flex-1 rounded-lg border border-line bg-white px-2 py-1.5 text-xs"
-          />
-
-          <button onClick={() => remove(idx)} className="shrink-0 text-danger hover:text-red-700 text-lg leading-none">×</button>
+          {/* Icon picker panel */}
+          {openPicker === idx && (
+            <div className="rounded-xl border border-line bg-white p-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted">Select Icon — Black on White / White on Black</p>
+              <div className="flex flex-wrap gap-2">
+                {SOCIAL_ICON_DEFS.map((def) => (
+                  <div key={def.key} className="flex flex-col items-center gap-1">
+                    {/* Black on white */}
+                    <button
+                      type="button"
+                      onClick={() => selectIcon(idx, def.key, "black-on-white")}
+                      className={`rounded-lg border-2 p-1 transition ${link.iconKey === def.key && link.variant === "black-on-white" ? "border-brand" : "border-line hover:border-gray-400"}`}
+                      title={`${def.label} — black`}
+                    >
+                      <SocialIconSvg iconKey={def.key} variant="black-on-white" size={22} />
+                    </button>
+                    {/* White on black */}
+                    <button
+                      type="button"
+                      onClick={() => selectIcon(idx, def.key, "white-on-black")}
+                      className={`rounded-lg border-2 p-1 transition ${link.iconKey === def.key && link.variant === "white-on-black" ? "border-brand" : "border-line hover:border-gray-400"}`}
+                      title={`${def.label} — white`}
+                    >
+                      <SocialIconSvg iconKey={def.key} variant="white-on-black" size={22} />
+                    </button>
+                    <span className="text-[8px] text-muted">{def.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ))}
       <button
@@ -133,6 +162,7 @@ export default function SiteSettings() {
   const [items, setItems] = useState([]);
   const [values, setValues] = useState({});
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
 
   // SEO general fields (stored separately in SeoSettings model)
@@ -153,10 +183,15 @@ export default function SiteSettings() {
   }, []);
 
   async function save() {
-    const updates = items.map((i) => ({ key: i.key, value: values[i.key] ?? "" }));
-    await api.post("/content/bulk", { updates });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError("");
+    try {
+      const updates = items.map((i) => ({ key: i.key, value: values[i.key] ?? "" }));
+      await api.post("/content/bulk", { updates });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err?.response?.data?.message || err?.message || "Save failed");
+    }
   }
 
   async function saveSeo() {
@@ -184,6 +219,12 @@ export default function SiteSettings() {
           {saved ? "✓ Saved" : "Save Changes"}
         </button>
       </div>
+      {saveError && (
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-semibold text-red-700">
+          <span>❌ {saveError}</span>
+          <button onClick={() => setSaveError("")} className="ml-4 text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
 
       {/* SEO General */}
       {seo && (
