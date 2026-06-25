@@ -36,6 +36,7 @@ const blocSchema = new mongoose.Schema(
     featured: { type: Boolean, default: false },
     hidden: { type: Boolean, default: false },        // admin can hide product
     shippingException: { type: Boolean, default: false }, // free delivery override
+    advanceAmount: { type: Number, default: 0 },           // advance payment to lock spot (0 = full COD)
     variants: [{
       group: String,   // e.g. "Color"
       options: [{ name: String, image: String, price: Number }],

@@ -58,6 +58,15 @@ app.use((req, res, next) => {
   express.json({ limit: isImageUpload ? "10mb" : "200kb" })(req, res, next);
 });
 app.use(cookieParser());
+// Ensure all JSON responses declare UTF-8 charset — prevents encoding boxes (e.g. × showing as □)
+app.use((req, res, next) => {
+  const orig = res.json.bind(res);
+  res.json = (body) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return orig(body);
+  };
+  next();
+});
 
 // Rate limiters
 const authLimiter = rateLimit({

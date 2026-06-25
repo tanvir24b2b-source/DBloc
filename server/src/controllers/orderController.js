@@ -43,6 +43,14 @@ export async function placeOrder(req, res) {
   if (!blocCheck) return res.status(404).json({ message: "Bloc not found" });
   if (new Date(blocCheck.endTime) < new Date()) return res.status(400).json({ message: "This Bloc has expired" });
 
+  // Duplicate join check — one join per phone per bloc; also check by user account if logged in
+  const dupChecks = [Order.findOne({ bloc: blocId, mobile: reqMobile })];
+  if (req.user) dupChecks.push(Order.findOne({ bloc: blocId, user: req.user._id }));
+  const [dupByPhone, dupByUser] = await Promise.all(dupChecks);
+  if (dupByPhone || dupByUser) {
+    return res.status(409).json({ message: "You have already joined this Bloc. Each customer can join once." });
+  }
+
   // Atomic spots reservation — prevents race condition overselling.
   // Uses $expr so both filledSpots and maxSpots are read atomically from the DB,
   // avoiding stale-read overselling when maxSpots was fetched before a concurrent update.
@@ -185,10 +193,14 @@ export async function recentBlocOrders(req, res) {
   if (!mongoose.Types.ObjectId.isValid(req.params.blocId)) {
     return res.status(400).json({ message: "Invalid bloc ID" });
   }
-  const orders = await Order.find({ bloc: req.params.blocId })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .select("customerName mobile createdAt");
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [orders, count24h] = await Promise.all([
+    Order.find({ bloc: req.params.blocId, createdAt: { $gte: since24h } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select("customerName mobile createdAt"),
+    Order.countDocuments({ bloc: req.params.blocId, createdAt: { $gte: since24h } }),
+  ]);
 
   const mask = (phone = "") => {
     if (phone.length <= 4) return "****";
@@ -201,11 +213,14 @@ export async function recentBlocOrders(req, res) {
     return `${Math.round(m / 60)}h ago`;
   };
 
-  res.json(orders.map((o) => ({
-    name: o.customerName || "Someone",
-    phone: mask(o.mobile),
-    time: ago(o.createdAt),
-  })));
+  res.json({
+    orders: orders.map((o) => ({
+      name: o.customerName || "Someone",
+      phone: mask(o.mobile),
+      time: ago(o.createdAt),
+    })),
+    count24h,
+  });
 }
 
 // --- Admin: edit order details (allowed only before shipped) ---

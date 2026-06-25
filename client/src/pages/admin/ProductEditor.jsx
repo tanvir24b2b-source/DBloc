@@ -109,7 +109,7 @@ const EMPTY = {
   ],
   category: "", tags: [], relatedProducts: [],
   maxSpots: 100, goal: 50, filledSpots: 0,
-  hidden: false, featured: false, shippingException: false,
+  hidden: false, featured: false, shippingException: false, advanceAmount: 0,
   endTime: defaultEnd(), countdownEnabled: true,
   variants: [],
   reviews: [],
@@ -693,6 +693,14 @@ export default function ProductEditor() {
                 Enable this to provide <strong>FREE DELIVERY</strong> for this specific product, overriding all other logistics rules.
               </p>
             )}
+          </div>
+
+          {/* Advance Payment */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-600">Advance Payment</p>
+            <label className="mb-1 block text-xs text-gray-500">Amount customer pays upfront to lock their spot (0 = full payment on delivery)</label>
+            <input type="number" min="0" value={form.advanceAmount || 0} onChange={(e) => setForm((f) => ({ ...f, advanceAmount: Number(e.target.value) }))}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 outline-none focus:border-orange-400" />
           </div>
 
           {/* Launch Countdown */}

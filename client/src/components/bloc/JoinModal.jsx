@@ -278,6 +278,15 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity: initialQ
             </div>
           </div>
 
+          {bloc.advanceAmount > 0 && (
+            <div className="flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/[0.04] px-4 py-3">
+              <span>🔒</span>
+              <p className="text-sm font-semibold text-ink">
+                Pay <span className="font-extrabold text-brand">{currency}{formatPrice(bloc.advanceAmount)}</span> now to lock your spot · remaining {currency}{formatPrice(Math.max(0, bloc.blocPrice * qty - bloc.advanceAmount))} on delivery
+              </p>
+            </div>
+          )}
+
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <button disabled={loading} className="w-full rounded-full bg-brand py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-60">

@@ -101,14 +101,15 @@ export default function BlocDetail() {
     return list.slice(0, 6);
   }, [bloc]);
 
-  // Real recent orders for this bloc — refreshes every 30s
-  // Must use bloc._id (not slug) because the backend validates ObjectId
-  const { data: recentActivity = [] } = useQuery({
+  // Real recent orders for this bloc — refreshes every 30s, filtered to last 24h on backend
+  const { data: recentData = { orders: [], count24h: 0 } } = useQuery({
     queryKey: ["bloc-recent", bloc?._id],
     queryFn: () => api.get(`/orders/bloc/${bloc._id}/recent`).then((r) => r.data),
     enabled: !!bloc?._id,
     refetchInterval: 30000,
   });
+  const recentActivity = recentData.orders;
+  const count24h = recentData.count24h;
 
   if (isLoading) return <LoadingScreen />;
   if (!bloc) return <p className="p-16 text-center text-muted">Bloc not found.</p>;
@@ -234,6 +235,16 @@ export default function BlocDetail() {
             </div>
           </div>
 
+          {/* Advance payment line */}
+          {bloc.advanceAmount > 0 && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/[0.04] px-4 py-3">
+              <span className="text-base">🔒</span>
+              <p className="text-sm font-semibold text-ink">
+                Pay <span className="font-extrabold text-brand">{currency}{formatPrice(bloc.advanceAmount)}</span> now to lock your spot · rest on delivery
+              </p>
+            </div>
+          )}
+
           {/* Join button */}
           <button
             ref={topJoinRef}
@@ -244,26 +255,10 @@ export default function BlocDetail() {
             {bloc.status === "active" ? `${joinLabel} NOW →` : bloc.status === "full" ? "BLOC FULL" : "BLOC EXPIRED"}
           </button>
 
-          {/* Closing in */}
-          <div className="mt-3 rounded-xl border border-brand/30 bg-brand/[0.04] px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-ink"><span className="text-brand">⚡</span> <EditableText keyName="bloc.closingLabel" fallback="Closing In" /></span>
-              <span className="text-[10px] font-semibold text-brand">🔥 {spotsLeft} spots left</span>
-            </div>
-            <div className="mt-2 flex items-center justify-center gap-1">
-              <FlipCell value={t.d} label="DAYS" /><span className="pb-3.5 text-xs font-bold text-muted">:</span>
-              <FlipCell value={t.h} label="HRS" /><span className="pb-3.5 text-xs font-bold text-muted">:</span>
-              <FlipCell value={t.m} label="MIN" /><span className="pb-3.5 text-xs font-bold text-muted">:</span>
-              <FlipCell value={t.s} label="SEC" />
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
-              <div className="h-full rounded-full bg-brand" style={{ width: `${capacityPct}%` }} />
-            </div>
-            <div className="mt-1.5 flex items-center justify-between text-[10px]">
-              <span className="rounded-full border border-brand px-2 py-0.5 font-bold text-brand">ACTIVE</span>
-              <span className="animate-hurry font-bold text-brand"><EditableText keyName="bloc.hurryText" fallback="Hurry — closes soon!" /></span>
-              <span className="flex items-center gap-1 text-success"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Live</span>
-            </div>
+          {/* Spots + live status row (timer moved to sticky bar only) */}
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-line bg-cream px-4 py-2.5 text-[11px]">
+            <span className="flex items-center gap-1 text-success font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Live · {spotsLeft} spots left</span>
+            <span className="animate-hurry font-bold text-brand"><EditableText keyName="bloc.hurryText" fallback="Hurry — closes soon!" /></span>
           </div>
         </div>
       </div>
@@ -271,40 +266,44 @@ export default function BlocDetail() {
       {/* ===== Participation + Bloc Deal Price (side by side on desktop) ===== */}
       <div className="grid gap-5 md:grid-cols-2">
 
-        {/* Left: Participation */}
+        {/* Left: Participation — momentum copy */}
         <Section>
-          <div className="flex items-start justify-between">
+          {unlockPct < 30 ? (
             <div>
-              <p className="text-2xl font-extrabold text-ink">{joined} joined</p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.participationLabel" fallback="Current Participation" /></p>
+              <p className="text-xl font-extrabold text-brand">🔥 Trending</p>
+              <p className="mt-1 text-sm font-semibold text-ink">
+                {count24h > 0 ? `${count24h} joined in the last 24h` : "Be among the first to join"}
+              </p>
             </div>
-            {moreNeeded > 0 ? (
-              <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">🎯 Only {moreNeeded} more needed</span>
-            ) : (
-              <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success">✓ Unlocked</span>
-            )}
-          </div>
+          ) : unlockPct < 70 ? (
+            <div>
+              <p className="text-xl font-extrabold text-ink">👥 {joined} joined</p>
+              <p className="mt-1 text-sm font-semibold text-brand">Gaining momentum — join now</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xl font-extrabold text-ink">🚀 Almost there!</p>
+              <p className="mt-1 text-sm font-semibold text-danger">Only {spotsLeft} spots left — don't miss out</p>
+            </div>
+          )}
 
           <div className="mt-4 space-y-3">
             <div>
               <div className="mb-1 flex justify-between text-xs font-semibold">
                 <span className="text-ink"><EditableText keyName="bloc.unlockLabel" fallback="Unlock Progress" /></span>
-                <span className="text-muted">{joined} / {unlockGoal} to goal</span>
+                {moreNeeded > 0
+                  ? <span className="text-brand">{moreNeeded} more to unlock deal</span>
+                  : <span className="text-success">✓ Deal unlocked!</span>}
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-brand" style={{ width: `${unlockPct}%` }} /></div>
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs font-semibold">
-                <span className="text-ink"><EditableText keyName="bloc.capacityLabel" fallback="Capacity Status" /></span>
-                <span className="text-muted">{capacityPct}% filled</span>
+                <span className="text-ink"><EditableText keyName="bloc.capacityLabel" fallback="Capacity" /></span>
+                <span className="text-muted">{spotsLeft} spots remaining</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-ink" style={{ width: `${capacityPct}%` }} /></div>
             </div>
-          </div>
-
-          <div className="mt-4 flex justify-between border-t border-line pt-3 text-sm">
-            <div><p className="font-bold text-ink">{unlockGoal} Units</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Min. Required</p></div>
-            <div className="text-right"><p className="font-bold text-ink">{spotsLeft} Available</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Remaining Spots</p></div>
           </div>
         </Section>
 
@@ -347,25 +346,35 @@ export default function BlocDetail() {
       {/* ===== Recent Joins + Delivery side by side ===== */}
       <Section className="!p-0 overflow-hidden">
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-line">
-          {/* Left: Recent Joins */}
+          {/* Left: Recent Joins — only shown if there's activity in last 24h */}
           <div className="p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-                <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
-                <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
-              </h2>
-              <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live</span>
-            </div>
-            <div className="mt-3 space-y-2">
-              {recentActivity.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
-                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                  <span className="font-mono text-xs text-muted">{r.phone}</span>
-                  <span className="text-[10px] text-muted">{r.time}</span>
+            {recentActivity.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+                    <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
+                    <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
+                  </h2>
+                  <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live · last 24h</span>
                 </div>
-              ))}
-            </div>
+                <div className="mt-3 space-y-2">
+                  {recentActivity.map((r, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
+                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                      <span className="font-mono text-xs text-muted">{r.phone}</span>
+                      <span className="text-[10px] text-muted">{r.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center py-6 text-center">
+                <p className="text-2xl">🚀</p>
+                <p className="mt-2 text-sm font-bold text-ink">Be the first to join!</p>
+                <p className="mt-1 text-xs text-muted">No recent joins yet — grab an early spot.</p>
+              </div>
+            )}
           </div>
 
           {/* Right: Estimated Delivery */}
@@ -376,7 +385,7 @@ export default function BlocDetail() {
             </div>
             <div className="mt-4 space-y-3">
               {[
-                { t: "Bloc Fills", d: `Today · ${fmt(0)}` },
+                { t: "Bloc Fills", d: fmt(0) },
                 { t: "Order Dispatched", d: `${fmt(1)}–${fmt(2)}` },
                 { t: "Delivered to You", d: `${fmt(4)}–${fmt(7)} est.` },
               ].map((step, i, arr) => {
