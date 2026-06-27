@@ -79,7 +79,7 @@ export async function getBloc(req, res) {
   res.json(applyRealFill(bloc.toJSON(), filled[bloc._id.toString()] || 0));
 }
 
-const BLOC_FIELDS = ["title","slug","description","shortDescription","fullDescription","image","gallery","category","tags","relatedProducts","originalPrice","blocPrice","priceTiers","maxSpots","goal","endTime","rating","reviewCount","reviews","sku","featured","hidden","shippingException","variants","features"];
+const BLOC_FIELDS = ["title","slug","description","shortDescription","fullDescription","image","gallery","category","tags","relatedProducts","originalPrice","blocPrice","priceTiers","maxSpots","goal","endTime","rating","reviewCount","reviews","sku","featured","hidden","shippingException","variants","features","advanceAmount","discount"];
 function pickBlocFields(body) {
   return Object.fromEntries(Object.entries(body).filter(([k]) => BLOC_FIELDS.includes(k)));
 }
