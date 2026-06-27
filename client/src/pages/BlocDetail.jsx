@@ -277,45 +277,38 @@ export default function BlocDetail() {
               🎉 You Save {currency}{formatPrice(save)} — That's {discount}% OFF
             </div>
 
-            {/* Animated progress bar with unlock marker */}
+            {/* Animated progress bar — fixed marker at 65%, min 12% fill */}
             {(() => {
-              const markerPct = Math.min(95, Math.round((unlockGoal / bloc.maxSpots) * 100));
-              const fillPct = Math.min(100, Math.round((joined / bloc.maxSpots) * 100));
               const unlocked = joined >= unlockGoal;
+              const fillPct = unlocked ? 100 : Math.max(12, unlockPct);
               return (
                 <div className="mt-4">
-                  <div className="mb-1.5 flex items-center justify-between text-xs font-semibold">
+                  <div className="mb-1.5 text-xs font-semibold">
                     {unlocked
                       ? <span className="text-success font-bold">✓ Deal unlocked!</span>
                       : unlockPct >= 35
                         ? <span className="text-ink"><strong>{joined} joined</strong> · {moreNeeded} more to unlock</span>
-                        : <span className="text-ink">Only <strong className="text-brand">{moreNeeded} more</strong> needed to unlock this price</span>
+                        : <span className="text-ink">Only <strong className="text-brand">{moreNeeded} more people needed</strong> to unlock this price</span>
                     }
-                    <span className={unlocked ? "text-success font-bold" : "text-brand"}>{joined}/{unlockGoal}</span>
                   </div>
                   <div className="relative h-2.5 w-full rounded-full bg-line">
-                    {/* Fill */}
                     <div
                       className="bar-shimmer bar-pulse absolute left-0 top-0 h-full rounded-full bg-brand transition-all duration-1000 ease-out"
-                      style={{ width: `${Math.max(5, fillPct)}%` }}
+                      style={{ width: `${fillPct}%` }}
                     />
-                    {/* Unlock marker — vertical dash */}
-                    <div
-                      className="absolute top-[-3px] h-[18px] w-[2.5px] rounded-full transition-colors duration-500"
-                      style={{
-                        left: `${markerPct}%`,
-                        background: unlocked ? "#22c55e" : "#f97316",
-                        boxShadow: unlocked ? "0 0 6px #22c55e" : "0 0 6px #f97316",
-                      }}
-                    />
+                    {/* Marker always at 65% — visual "unlock point" */}
+                    {!unlocked && (
+                      <div
+                        className="absolute top-[-3px] h-[18px] w-[2.5px] rounded-full bg-dark/60"
+                        style={{ left: "65%" }}
+                      />
+                    )}
                   </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-muted">
-                    <span>{joined} joined</span>
-                    <span style={{ marginLeft: `${markerPct - 6}%` }} className={unlocked ? "font-bold text-success" : "font-bold text-brand"}>
-                      {unlocked ? "✓ Unlocked" : `🔓 ${unlockGoal} to unlock`}
-                    </span>
-                    <span>{bloc.maxSpots} total</span>
-                  </div>
+                  {!unlocked && (
+                    <div className="mt-1 text-[10px] font-bold text-muted" style={{ marginLeft: "calc(65% - 32px)" }}>
+                      🔓 {moreNeeded} to unlock
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -393,7 +386,7 @@ export default function BlocDetail() {
                       .filter(Boolean)
                       .map((r, i) => (
                         <div
-                          key={(r.phone || i) + i}
+                          key={r._id || (r.phone + r.name)}
                           style={{ height: ITEM_H }}
                           className="flex items-center gap-2 rounded-lg bg-cream px-3 py-1.5"
                         >
