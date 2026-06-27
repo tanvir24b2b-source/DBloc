@@ -268,6 +268,7 @@ export default function ProductEditor() {
       blocPrice: Number(form.blocPrice),
       maxSpots: Number(form.maxSpots),
       goal: Number(form.goal) || Math.round(Number(form.maxSpots) * 0.5),
+      advanceAmount: Number(form.advanceAmount) || 0,
       ...(isNew ? { filledSpots: 0 } : {}),
       priceTiers: (form.priceTiers || []).map((t) => ({ ...t, price: Number(t.price), min: Number(t.min) })),
     };
