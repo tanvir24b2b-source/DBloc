@@ -382,27 +382,30 @@ export default function BlocDetail() {
                   <div className="h-px flex-1 bg-line" />
                 </div>
               )}
-              {/* Conveyor belt: container clips to SHOW items, wrapper shifts down on each tick */}
-              <div style={{ height: ITEM_H * SHOW, overflow: "hidden" }}>
-                <div style={{
-                  transform: `translateY(${isConveyor ? 0 : -ITEM_H}px)`,
-                  transition: isConveyor ? "transform 0.6s ease-in-out" : "none",
-                }}>
-                  {/* Pending item — hidden above until animation */}
-                  {[shuffleList[shuffleList.length - 1], ...shuffleList.slice(0, SHOW)].map((r, i) => (
-                    <div
-                      key={r.phone + i}
-                      style={{ height: ITEM_H }}
-                      className="flex items-center gap-2 rounded-lg bg-cream px-3 py-1.5"
-                    >
-                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                      <span className="font-mono text-xs text-muted">{r.phone}</span>
-                      <span className="text-[10px] font-semibold text-success">✓ Verified</span>
-                    </div>
-                  ))}
+              {/* Conveyor belt */}
+              {shuffleList.length > 0 && (
+                <div style={{ height: ITEM_H * SHOW, overflow: "hidden" }}>
+                  <div style={{
+                    transform: `translateY(${isConveyor ? 0 : -ITEM_H}px)`,
+                    transition: isConveyor ? "transform 0.6s ease-in-out" : "none",
+                  }}>
+                    {[shuffleList[shuffleList.length - 1], ...shuffleList.slice(0, SHOW)]
+                      .filter(Boolean)
+                      .map((r, i) => (
+                        <div
+                          key={(r.phone || i) + i}
+                          style={{ height: ITEM_H }}
+                          className="flex items-center gap-2 rounded-lg bg-cream px-3 py-1.5"
+                        >
+                          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{(r.name || "?")[0]}</div>
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name || "Someone"}</span>
+                          <span className="font-mono text-xs text-muted">{r.phone}</span>
+                          <span className="text-[10px] font-semibold text-success">✓ Verified</span>
+                        </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               {recentActivity.length === 0 && shuffleList.length === 0 && (
                 <div className="py-6 text-center">
                   <p className="text-2xl">🚀</p>
