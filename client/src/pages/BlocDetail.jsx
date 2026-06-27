@@ -178,7 +178,23 @@ export default function BlocDetail() {
 
   return (
     <>
-    <SeoHead title={seoTitle} description={seoDesc} />
+    <SeoHead title={seoTitle} description={seoDesc} product={bloc} />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": bloc.title,
+      "description": bloc.description || seoDesc,
+      "image": bloc.images?.length ? bloc.images : [bloc.image].filter(Boolean),
+      "brand": { "@type": "Brand", "name": "D BLOC" },
+      "offers": {
+        "@type": "Offer",
+        "url": `https://dbloc.demarkt.com.bd/blocs/${bloc._id}`,
+        "priceCurrency": "BDT",
+        "price": bloc.blocPrice,
+        "availability": bloc.filledSpots < bloc.maxSpots ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
+        "seller": { "@type": "Organization", "name": "D BLOC" }
+      }
+    }) }} />
     <div className="page-slide-in mx-auto max-w-6xl space-y-5 px-3 py-4 pb-28 md:px-6 md:py-8">
       {/* ===== TOP: gallery + info ===== */}
       <div className="grid items-start gap-4 md:gap-8 lg:grid-cols-2">

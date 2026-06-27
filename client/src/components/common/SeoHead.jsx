@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../lib/api.js";
 
-export default function SeoHead({ pageKey, title, description }) {
+export default function SeoHead({ pageKey, title, description, product }) {
   const { data: seo } = useQuery({
     queryKey: ["seo-settings"],
     queryFn: async () => (await api.get("/seo")).data,
@@ -19,8 +19,9 @@ export default function SeoHead({ pageKey, title, description }) {
     || seo?.siteDescription
     || "Bangladesh's group-buy platform. Buy together, pay wholesale.";
 
-  const ogImage = seo?.ogImage || "";
+  const ogImage = product?.image || seo?.ogImage || "";
   const canonical = seo?.canonicalUrl ? `${seo.canonicalUrl}${window.location.pathname}` : "";
+  const isProduct = !!product;
 
   // Validate tracking IDs before injecting into script tags to prevent XSS
   const safeGtmId = /^GTM-[A-Z0-9]+$/.test(seo?.googleTagManagerId) ? seo.googleTagManagerId : null;
@@ -34,8 +35,13 @@ export default function SeoHead({ pageKey, title, description }) {
       {seo?.siteKeywords && <meta name="keywords" content={seo.siteKeywords} />}
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDesc} />
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={isProduct ? "product" : "website"} />
       {ogImage && <meta property="og:image" content={ogImage} />}
+      {ogImage && <meta property="og:image:width" content="800" />}
+      {ogImage && <meta property="og:image:height" content="800" />}
+      {isProduct && <meta property="og:availability" content="instock" />}
+      {isProduct && product.blocPrice && <meta property="og:price:amount" content={String(product.blocPrice)} />}
+      {isProduct && <meta property="og:price:currency" content="BDT" />}
       {canonical && <link rel="canonical" href={canonical} />}
       {/* GTM — preferred, loads all tags */}
       {safeGtmId && (

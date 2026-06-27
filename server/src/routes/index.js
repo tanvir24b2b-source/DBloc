@@ -31,6 +31,21 @@ router.put("/auth/profile", protect, wrap(auth.updateProfile));
 router.post("/auth/forgot-password", wrap(auth.forgotPassword));
 router.post("/auth/reset-password", wrap(auth.resetPasswordWithOtp));
 
+// --- Sitemap (public, for Google + AI crawlers) ---
+router.get("/sitemap.xml", wrap(async (req, res) => {
+  const Bloc = (await import("../models/Bloc.js")).default;
+  const base = "https://dbloc.demarkt.com.bd";
+  const blocs = await Bloc.find({ status: "active" }).select("_id updatedAt").lean();
+  const staticUrls = ["/", "/blocs", "/categories", "/track-order"].map(
+    (p) => `<url><loc>${base}${p}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`
+  ).join("");
+  const blocUrls = blocs.map(
+    (b) => `<url><loc>${base}/blocs/${b._id}</loc><lastmod>${new Date(b.updatedAt).toISOString().split("T")[0]}</lastmod><changefreq>hourly</changefreq><priority>1.0</priority></url>`
+  ).join("");
+  res.setHeader("Content-Type", "application/xml");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${blocUrls}</urlset>`);
+}));
+
 // --- Blocs ---
 router.get("/blocs", wrap(bloc.listBlocs));
 router.get("/blocs/:id", wrap(bloc.getBloc));
