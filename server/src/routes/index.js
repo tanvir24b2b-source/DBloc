@@ -90,6 +90,18 @@ router.get("/seo", wrap(seo.getSettings));
 router.get("/seo/admin", adminGuard, wrap(seo.getSettingsAdmin));
 router.put("/seo", adminGuard, wrap(seo.updateSettings));
 router.post("/seo/mcp-token", adminGuard, wrap(seo.generateMcpToken));
+router.get("/seo/meta-log", adminGuard, wrap(async (req, res) => {
+  const SeoSettings = (await import("../models/SeoSettings.js")).default;
+  const s = await SeoSettings.getSingleton();
+  res.json(s.metaEventLog || []);
+}));
+router.post("/seo/meta-test", adminGuard, wrap(async (req, res) => {
+  const { sendCapiPurchase } = await import("../utils/metaCapi.js");
+  const fakeOrder = { _id: "test_" + Date.now(), orderId: "TEST-001", email: "test@dbloc.com", mobile: "01700000000", amount: 999, quantity: 1 };
+  const fakeBloc  = { _id: "test_bloc", title: "Test Product", blocPrice: 999 };
+  await sendCapiPurchase(fakeOrder, fakeBloc);
+  res.json({ message: "Test Purchase event sent to Meta CAPI. Check Meta Events Manager." });
+}));
 
 // --- Payment Gateways ---
 router.get("/payment-gateways", wrap(paymentGw.listPublic));

@@ -23,7 +23,7 @@ export async function updateSettings(req, res) {
   const allowed = [
     "siteTitle", "siteDescription", "siteKeywords", "ogImage", "canonicalUrl",
     "googleTagManagerId", "googleAnalyticsId", "googleSearchConsoleCode",
-    "facebookPixelId", "facebookCapiToken",
+    "facebookPixelId", "facebookCapiToken", "facebookTestEventCode", "facebookApiVersion", "metaEvents",
     "aiClaudeConnected", "aiChatGPTConnected", "aiGeminiConnected", "aiOtherConnected", "aiOtherName",
   ];
   // robotsTxt is master_admin only

@@ -14,7 +14,19 @@ const seoSchema = new mongoose.Schema({
   googleAnalyticsId: { type: String, default: "" },   // G-XXXXXXXXXX (direct, if not using GTM)
   googleSearchConsoleCode: { type: String, default: "" },
   facebookPixelId: { type: String, default: "" },
-  facebookCapiToken: { type: String, default: "" },   // FB Conversion API server token
+  facebookCapiToken: { type: String, default: "" },
+  facebookTestEventCode: { type: String, default: "" }, // e.g. TEST12345 — for Meta Events Manager testing
+  facebookApiVersion: { type: String, default: "v21.0" }, // update when Meta releases new version
+  // Per-event toggles: browser (pixel) + server (CAPI)
+  metaEvents: {
+    viewContent:       { browser: { type: Boolean, default: true }, server: { type: Boolean, default: false } },
+    addToCart:         { browser: { type: Boolean, default: true }, server: { type: Boolean, default: false } },
+    initiateCheckout:  { browser: { type: Boolean, default: true }, server: { type: Boolean, default: false } },
+    purchase:          { browser: { type: Boolean, default: true }, server: { type: Boolean, default: true  } },
+    lead:              { browser: { type: Boolean, default: false }, server: { type: Boolean, default: false } },
+  },
+  // Last 20 CAPI event logs
+  metaEventLog: { type: Array, default: [] },
 
   // Robots
   robotsTxt: { type: String, default: "User-agent: *\nAllow: /\nDisallow: /admin/\n" },

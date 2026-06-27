@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/useAuthStore.js";
 import api from "../../lib/api.js";
@@ -15,7 +15,7 @@ export default function ManageSEO() {
   const { user } = useAuthStore();
   const isMaster = user?.role === "master_admin";
 
-  const TABS = ["Analytics & Tracking", ...(isMaster ? ["Robots.txt"] : []), "ConnectAI"];
+  const TABS = ["Analytics & Tracking", "Meta Events", ...(isMaster ? ["Robots.txt"] : []), "ConnectAI"];
 
   const [tab, setTab] = useState("Analytics & Tracking");
   const [msg, setMsg] = useState("");
@@ -127,6 +127,9 @@ export default function ManageSEO() {
             </button>
           </>
         )}
+
+        {/* META EVENTS */}
+        {tab === "Meta Events" && <MetaEventsTab seo={seo} merged={merged} set={set} saveMut={saveMut} />}
 
         {/* ROBOTS — master_admin only */}
         {tab === "Robots.txt" && isMaster && (
@@ -242,6 +245,141 @@ export default function ManageSEO() {
         )}
       </div>
     </div>
+  );
+}
+
+const META_EVENTS = [
+  { key: "viewContent",      label: "View Content",       desc: "Fires when a customer opens a product page" },
+  { key: "addToCart",        label: "Add to Cart",        desc: "Fires when Join button is clicked" },
+  { key: "initiateCheckout", label: "Initiate Checkout",  desc: "Fires when the join form is submitted" },
+  { key: "purchase",         label: "Purchase",           desc: "Fires when order is confirmed" },
+  { key: "lead",             label: "Lead",               desc: "Fires when someone signs up or subscribes" },
+];
+
+function MetaEventsTab({ seo, merged, set, saveMut }) {
+  const [log, setLog] = useState([]);
+  const [logLoading, setLogLoading] = useState(false);
+  const [testMsg, setTestMsg] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+
+  useEffect(() => {
+    setLogLoading(true);
+    api.get("/seo/meta-log").then(({ data }) => setLog(data)).catch(() => {}).finally(() => setLogLoading(false));
+  }, []);
+
+  async function sendTest() {
+    setTestLoading(true); setTestMsg("");
+    try {
+      const { data } = await api.post("/seo/meta-test");
+      setTestMsg("✓ " + data.message);
+      // Refresh log
+      const { data: newLog } = await api.get("/seo/meta-log");
+      setLog(newLog);
+    } catch (e) {
+      setTestMsg("❌ " + (e?.response?.data?.message || "Test failed"));
+    } finally { setTestLoading(false); }
+  }
+
+  function setEventToggle(eventKey, side, val) {
+    const current = merged.metaEvents || {};
+    const updated = {
+      ...current,
+      [eventKey]: { ...(current[eventKey] || {}), [side]: val },
+    };
+    set("metaEvents", updated);
+  }
+
+  const events = merged.metaEvents || {};
+
+  return (
+    <div className="space-y-5">
+      {/* Credentials */}
+      <div className="rounded-xl border border-line bg-white p-4 space-y-3">
+        <p className="text-sm font-bold text-ink">Meta Pixel & CAPI Credentials</p>
+        <Field label="Pixel ID">
+          <input className={inp} value={merged.facebookPixelId || ""} onChange={(e) => set("facebookPixelId", e.target.value)} placeholder="1234567890" />
+        </Field>
+        <Field label="CAPI Access Token">
+          <input className={inp} type="password" value={merged.facebookCapiToken || ""} onChange={(e) => set("facebookCapiToken", e.target.value)} placeholder="EAAxxxxxxx..." />
+          {seo?.facebookCapiTokenSet && !merged.facebookCapiToken && <p className="mt-1 text-[10px] text-green-600">✓ Token is set</p>}
+        </Field>
+        <Field label="Test Event Code (optional)">
+          <input className={inp} value={merged.facebookTestEventCode || ""} onChange={(e) => set("facebookTestEventCode", e.target.value)} placeholder="TEST12345 — from Meta Events Manager" />
+        </Field>
+        <Field label="API Version">
+          <input className={inp} value={merged.facebookApiVersion || "v21.0"} onChange={(e) => set("facebookApiVersion", e.target.value)} placeholder="v21.0" />
+          <p className="mt-1 text-[10px] text-muted">Update when Meta releases a new version (e.g. v22.0). Check Meta's changelog.</p>
+        </Field>
+      </div>
+
+      {/* Event toggles */}
+      <div className="rounded-xl border border-line bg-white p-4">
+        <p className="mb-3 text-sm font-bold text-ink">Event Toggles</p>
+        <div className="mb-2 grid grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-wider text-muted px-1">
+          <span>Event</span><span className="text-center">Browser (Pixel)</span><span className="text-center">Server (CAPI)</span>
+        </div>
+        <div className="space-y-2">
+          {META_EVENTS.map(({ key, label, desc }) => (
+            <div key={key} className="grid grid-cols-3 items-center gap-2 rounded-lg border border-line px-3 py-2.5">
+              <div>
+                <p className="text-xs font-semibold text-ink">{label}</p>
+                <p className="text-[10px] text-muted">{desc}</p>
+              </div>
+              <div className="flex justify-center">
+                <Toggle value={events[key]?.browser !== false} onChange={(v) => setEventToggle(key, "browser", v)} />
+              </div>
+              <div className="flex justify-center">
+                <Toggle value={!!events[key]?.server} onChange={(v) => setEventToggle(key, "server", v)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}
+          className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          {saveMut.isPending ? "Saving..." : "Save Changes"}
+        </button>
+        <button onClick={sendTest} disabled={testLoading || !seo?.facebookCapiTokenSet}
+          className="rounded-lg border border-brand px-5 py-2.5 text-sm font-semibold text-brand hover:bg-brand/5 disabled:opacity-40">
+          {testLoading ? "Sending..." : "Send Test Event"}
+        </button>
+      </div>
+      {testMsg && <p className="text-xs font-medium text-green-700">{testMsg}</p>}
+
+      {/* Event log */}
+      <div className="rounded-xl border border-line bg-white p-4">
+        <p className="mb-3 text-sm font-bold text-ink">Recent CAPI Events (last 20)</p>
+        {logLoading ? <p className="text-xs text-muted">Loading...</p> : log.length === 0 ? (
+          <p className="text-xs text-muted">No events sent yet. Place a test order or click "Send Test Event".</p>
+        ) : (
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {log.map((e, i) => (
+              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs ${e.status === "ok" ? "bg-green-50" : "bg-red-50"}`}>
+                <span className={`font-bold ${e.status === "ok" ? "text-green-600" : "text-red-500"}`}>{e.status === "ok" ? "✓" : "✗"}</span>
+                <span className="font-semibold text-ink">{e.event}</span>
+                {e.eventsReceived && <span className="text-muted">received: {e.eventsReceived}</span>}
+                {e.error && <span className="text-red-500 truncate">{e.error}</span>}
+                <span className="ml-auto text-muted shrink-0">{new Date(e.time).toLocaleTimeString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${value ? "bg-brand" : "bg-line"}`}
+    >
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : "translate-x-1"}`} />
+    </button>
   );
 }
 
