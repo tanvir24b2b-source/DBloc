@@ -140,6 +140,11 @@ body {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
   animation: bar-shimmer 2s ease-in-out infinite;
 }
+@keyframes bar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.78; }
+}
+.bar-pulse { animation: bar-pulse 2s ease-in-out infinite; }
 
 /* Delivery timeline: orange pulse flowing down the connector toward the next step */
 @keyframes flow-down {

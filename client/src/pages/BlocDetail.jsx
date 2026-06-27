@@ -251,6 +251,23 @@ export default function BlocDetail() {
             <div className="mt-3 rounded-lg bg-[#dcfce7] py-2 text-center text-sm font-semibold text-[#15803d]">
               🎉 You Save {currency}{formatPrice(save)} — That's {discount}% OFF
             </div>
+
+            {/* Animated progress bar */}
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-xs font-semibold">
+                {unlockPct >= 35
+                  ? <span className="text-ink"><strong className="text-ink">{joined} joined</strong> · {moreNeeded > 0 ? `${moreNeeded} more to unlock` : "✓ Deal unlocked!"}</span>
+                  : <span className="text-ink">Only <strong className="text-brand">{moreNeeded} more</strong> needed to unlock this price</span>
+                }
+                {unlockPct >= 35 && <span className="text-brand">{unlockPct}%</span>}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-line">
+                <div
+                  className="bar-shimmer bar-pulse h-full rounded-full bg-brand"
+                  style={{ width: `${Math.max(3, unlockPct)}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Advance payment line */}
@@ -281,58 +298,62 @@ export default function BlocDetail() {
         </div>
       </div>
 
-      {/* ===== Participation + Bloc Deal Price (side by side on desktop) ===== */}
+      {/* ===== Recent Joins + Lowest Price side by side ===== */}
       <div className="grid gap-5 md:grid-cols-2">
 
-        {/* Left: Participation — momentum copy */}
-        <Section>
-          {unlockPct < 30 ? (
-            <div>
-              <p className="text-xl font-extrabold text-brand">🔥 Trending</p>
-              <p className="mt-1 text-sm font-semibold text-ink">
-                {count24h > 0 ? `${count24h} joined in the last 24h` : "Be among the first to join"}
-              </p>
+        {/* Left: Recent Joins */}
+        <Section className="!p-0 overflow-hidden">
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+                <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
+                <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
+              </h2>
+              <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live</span>
             </div>
-          ) : unlockPct < 70 ? (
-            <div>
-              <p className="text-xl font-extrabold text-ink">👥 {joined} joined</p>
-              <p className="mt-1 text-sm font-semibold text-brand">Gaining momentum — join now</p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-xl font-extrabold text-ink">🚀 Almost there!</p>
-              <p className="mt-1 text-sm font-semibold text-danger">Only {spotsLeft} spots left — don't miss out</p>
-            </div>
-          )}
-
-          <div className="mt-4 space-y-3">
-            <div>
-              <div className="mb-1 flex justify-between text-xs font-semibold">
-                <span className="text-ink"><EditableText keyName="bloc.unlockLabel" fallback="Unlock Progress" /></span>
-                {moreNeeded > 0
-                  ? <span className="text-brand">{moreNeeded} more to unlock deal</span>
-                  : <span className="text-success">✓ Deal unlocked!</span>}
+            <div className="mt-3 space-y-2">
+              {recentActivity.map((r) => (
+                <div key={r.phone + r.time} className="flex items-center gap-2 rounded-lg bg-[#dcfce7] px-3 py-2">
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-success/20 text-xs font-bold text-success">{r.name[0]}</div>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                  <span className="font-mono text-xs text-muted">{r.phone}</span>
+                  <span className="text-[10px] font-semibold text-success">{r.time}</span>
+                </div>
+              ))}
+              {recentActivity.length > 0 && shuffleList.length > 0 && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <div className="h-px flex-1 bg-line" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted">earlier</span>
+                  <div className="h-px flex-1 bg-line" />
+                </div>
+              )}
+              <div className="space-y-2 transition-opacity duration-400" style={{ opacity: shuffleFading ? 0 : 1 }}>
+                {shuffleList.slice(0, 4).map((r, i) => (
+                  <div key={r.phone + i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
+                    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                    <span className="font-mono text-xs text-muted">{r.phone}</span>
+                    <span className="text-[10px] text-muted">{r.time}</span>
+                  </div>
+                ))}
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-brand" style={{ width: `${unlockPct}%` }} /></div>
-            </div>
-            <div>
-              <div className="mb-1 flex justify-between text-xs font-semibold">
-                <span className="text-ink"><EditableText keyName="bloc.capacityLabel" fallback="Capacity" /></span>
-                <span className="text-muted">{spotsLeft} spots remaining</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-ink" style={{ width: `${capacityPct}%` }} /></div>
+              {recentActivity.length === 0 && shuffleList.length === 0 && (
+                <div className="py-6 text-center">
+                  <p className="text-2xl">🚀</p>
+                  <p className="mt-2 text-sm font-bold text-ink">Be the first to join!</p>
+                  <p className="mt-1 text-xs text-muted">Grab an early spot.</p>
+                </div>
+              )}
             </div>
           </div>
         </Section>
 
-        {/* Right: Bloc Deal Price */}
+        {/* Right: Lowest Price Achieved + qty */}
         <Section>
           <h2 className="flex items-center gap-2 text-base font-bold text-success">
             <span>🏷️</span>
             <EditableText keyName="bloc.tiersTitle" fallback="Lowest Price Achieved" />
           </h2>
-
-          {/* Single price card with green glow */}
           <div className="relative mt-4 rounded-xl border border-success/40 bg-white p-5 shadow-[0_0_18px_2px_rgba(34,197,94,0.15)] animate-pulse-glow-green">
             <div className="flex items-end gap-3">
               <p className="text-3xl font-extrabold text-success">{currency}{formatPrice(bloc.blocPrice)}</p>
@@ -341,8 +362,6 @@ export default function BlocDetail() {
             <p className="mt-1 text-xs font-semibold text-success">✓ You Save {currency}{formatPrice(save)} · {discount}% off</p>
             <p className="mt-2 text-[11px] text-muted">Everyone pays this price once the bloc fills</p>
           </div>
-
-          {/* Quantity + Total */}
           <div className="mt-4 flex items-center justify-between rounded-xl border border-line bg-cream px-4 py-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted"><EditableText keyName="bloc.qtyLabel" fallback="Select Quantity" /></p>
@@ -361,106 +380,43 @@ export default function BlocDetail() {
 
       </div>
 
-      {/* ===== Recent Joins + Delivery side by side ===== */}
-      <Section className="!p-0 overflow-hidden">
-        <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-line">
-          {/* Left: Recent Joins — recent zone (24h) + shuffle zone (older) */}
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-                <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
-                <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
-              </h2>
-              <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live</span>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {/* Recent zone — last 24h, green highlight */}
-              {recentActivity.map((r, i) => (
-                <div key={r.phone + r.time} className="flex items-center gap-2 rounded-lg bg-[#dcfce7] px-3 py-2">
-                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-success/20 text-xs font-bold text-success">{r.name[0]}</div>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                  <span className="font-mono text-xs text-muted">{r.phone}</span>
-                  <span className="text-[10px] font-semibold text-success">{r.time}</span>
+      {/* ===== Delivery — full width ===== */}
+      <Section>
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-bold text-ink">📦 <EditableText keyName="bloc.deliveryTitle" fallback="Delivery" /></h2>
+          <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold text-brand">FREE TRACKING</span>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {[
+            { t: "Bloc Fills", d: fmt(0) },
+            { t: "Order Dispatched", d: `${fmt(1)}–${fmt(2)}` },
+            { t: "Delivered to You", d: `${fmt(4)}–${fmt(7)} est.` },
+          ].map((step, i, arr) => {
+            const stage = bloc.status === "completed" ? 2 : bloc.status === "full" ? 1 : 0;
+            const done = i < stage;
+            const current = i === stage;
+            return (
+              <div key={i} className="flex items-start gap-3">
+                <div className="flex flex-col items-center pt-0.5">
+                  {current ? (
+                    <span className="relative h-3 w-3 shrink-0">
+                      <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-60" />
+                      <span className="absolute inset-0 rounded-full bg-brand" />
+                    </span>
+                  ) : (
+                    <span className={`h-3 w-3 shrink-0 rounded-full ${done ? "bg-success" : "border border-line bg-line"}`} />
+                  )}
                 </div>
-              ))}
-
-              {/* Divider — only if both zones have entries */}
-              {recentActivity.length > 0 && shuffleList.length > 0 && (
-                <div className="flex items-center gap-2 py-0.5">
-                  <div className="h-px flex-1 bg-line" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted">earlier</span>
-                  <div className="h-px flex-1 bg-line" />
+                <div>
+                  <p className={`text-sm font-bold ${current ? "text-brand" : done ? "text-success" : "text-ink"}`}>{step.t}</p>
+                  <p className="text-xs text-muted">{step.d}</p>
                 </div>
-              )}
-
-              {/* Shuffle zone — older joins, rotating with fade */}
-              <div
-                className="space-y-2 transition-opacity duration-400"
-                style={{ opacity: shuffleFading ? 0 : 1 }}
-              >
-                {shuffleList.slice(0, 4).map((r, i) => (
-                  <div key={r.phone + i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
-                    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                    <span className="font-mono text-xs text-muted">{r.phone}</span>
-                    <span className="text-[10px] text-muted">{r.time}</span>
-                  </div>
-                ))}
               </div>
-
-              {/* If no orders at all yet */}
-              {recentActivity.length === 0 && shuffleList.length === 0 && (
-                <div className="py-6 text-center">
-                  <p className="text-2xl">🚀</p>
-                  <p className="mt-2 text-sm font-bold text-ink">Be the first to join!</p>
-                  <p className="mt-1 text-xs text-muted">Grab an early spot.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Estimated Delivery */}
-          <div className="p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-bold text-ink">📦 <EditableText keyName="bloc.deliveryTitle" fallback="Delivery" /></h2>
-              <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold text-brand">FREE TRACKING</span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {[
-                { t: "Bloc Fills", d: fmt(0) },
-                { t: "Order Dispatched", d: `${fmt(1)}–${fmt(2)}` },
-                { t: "Delivered to You", d: `${fmt(4)}–${fmt(7)} est.` },
-              ].map((step, i, arr) => {
-                // Live stage: active bloc → still filling (0); full → dispatching (1); completed → delivered (2)
-                const stage = bloc.status === "completed" ? 2 : bloc.status === "full" ? 1 : 0;
-                const done = i < stage;
-                const current = i === stage;
-                return (
-                  <div key={i} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      {current ? (
-                        <span className="relative mt-1 h-3 w-3">
-                          <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-60" />
-                          <span className="absolute inset-0 rounded-full bg-brand" />
-                        </span>
-                      ) : (
-                        <span className={`mt-1 h-3 w-3 rounded-full ${done ? "bg-success" : "bg-line border border-line"}`} />
-                      )}
-                      {i < arr.length - 1 && (
-                        <span className={`my-1 w-px flex-1 ${done ? "bg-success" : current ? "flow-line bg-line" : "bg-line"}`} />
-                      )}
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold ${current ? "text-brand" : "text-ink"}`}>{step.t}</p>
-                      <p className="text-xs text-muted">{step.d}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-4 rounded-lg bg-brand/[0.06] px-3 py-2 text-xs font-semibold text-brand"><EditableText keyName="bloc.deliveryNote" fallback="🚚 Dhaka 1–2d · Outside 3–5d after dispatch" /></div>
-          </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 rounded-lg bg-brand/[0.06] px-3 py-2 text-xs font-semibold text-brand">
+          <EditableText keyName="bloc.deliveryNote" fallback="🚚 Dhaka 1–2d · Outside 3–5d after dispatch" />
         </div>
       </Section>
 
