@@ -9,6 +9,7 @@ import { signAccessToken, signRefreshToken, cookieOptions } from "../utils/token
 import { sendSms } from "../utils/sms.js";
 import { sendEmail } from "../utils/email.js";
 import { pushOrderToIntegrations } from "./integrationController.js";
+import { sendCapiPurchase } from "../utils/metaCapi.js";
 
 const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, mobile: u.mobile, address: u.address, role: u.role, permissions: u.permissions || [] });
 
@@ -121,6 +122,7 @@ export async function placeOrder(req, res) {
 
   // Push to CRM integrations (EcomDrive, Bismation, etc.)
   pushOrderToIntegrations(order, bloc);
+  sendCapiPurchase(order, bloc);
 
   // SMS + Email: manual payment methods need verification before confirming
   const isManualPayment = ["bkashmanual", "nagad"].includes(paymentMethod);

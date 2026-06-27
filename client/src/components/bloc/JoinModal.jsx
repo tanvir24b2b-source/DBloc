@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useText } from "../../store/ContentContext.jsx";
 import { useAuthStore } from "../../store/useAuthStore.js";
 import api from "../../lib/api.js";
+import { trackInitiateCheckout } from "../../lib/analytics.js";
 import { formatPrice } from "../../lib/format.js";
 
 export default function JoinModal({ bloc, onClose, onSuccess, quantity: initialQty = 1 }) {
@@ -66,6 +67,7 @@ export default function JoinModal({ bloc, onClose, onSuccess, quantity: initialQ
 
   async function submit(e) {
     e.preventDefault();
+    trackInitiateCheckout(bloc, qty);
     if (form.mobile.length !== 11) {
       setError("Mobile number must be exactly 11 digits (e.g. 01700000000)");
       return;

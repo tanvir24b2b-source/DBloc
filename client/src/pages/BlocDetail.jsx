@@ -11,6 +11,7 @@ import BlocCarousel from "../components/common/BlocCarousel.jsx";
 import SeoHead from "../components/common/SeoHead.jsx";
 import LoadingScreen from "../components/common/LoadingScreen.jsx";
 import api from "../lib/api.js";
+import { trackViewContent, trackAddToCart, trackInitiateCheckout, trackPurchase } from "../lib/analytics.js";
 
 /* ---------- small helpers ---------- */
 function fullCountdown(endTime) {
@@ -93,6 +94,10 @@ export default function BlocDetail() {
     const i = setInterval(() => setT(fullCountdown(bloc.endTime)), 1000);
     return () => clearInterval(i);
   }, [bloc]);
+
+  useEffect(() => {
+    if (bloc?._id) trackViewContent(bloc);
+  }, [bloc?._id]);
 
   // Gallery: use bloc.gallery if present, else build square variants
   const images = useMemo(() => {
@@ -297,7 +302,7 @@ export default function BlocDetail() {
           {/* Join button */}
           <button
             ref={topJoinRef}
-            onClick={() => setShowModal(true)}
+            onClick={() => { trackAddToCart(bloc, qty); setShowModal(true); }}
             disabled={bloc.status !== "active"}
             className="btn-shine mt-4 w-full rounded-xl bg-brand py-4 text-sm font-bold tracking-wide text-white shadow-lg shadow-brand/30 transition hover:bg-brand-hover disabled:bg-muted disabled:shadow-none"
           >
@@ -525,7 +530,7 @@ export default function BlocDetail() {
 
           {/* Right: CTA button — vertically centered */}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => { trackAddToCart(bloc, qty); setShowModal(true); }}
             disabled={bloc.status !== "active"}
             className="btn-shine shrink-0 rounded-xl bg-brand px-5 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-brand/40 transition hover:bg-brand-hover disabled:bg-muted disabled:shadow-none"
           >
@@ -535,7 +540,7 @@ export default function BlocDetail() {
       </div>
 
       {showModal && (
-        <JoinModal bloc={bloc} quantity={qty} onClose={() => setShowModal(false)} onSuccess={(order) => { setShowModal(false); setPlaced(order); }} />
+        <JoinModal bloc={bloc} quantity={qty} onClose={() => setShowModal(false)} onSuccess={(order) => { setShowModal(false); setPlaced(order); trackPurchase(order, bloc); }} />
       )}
       {placed && createPortal(
         <div className="modal-fade fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPlaced(null)}>
