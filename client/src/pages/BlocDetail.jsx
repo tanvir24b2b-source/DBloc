@@ -108,8 +108,9 @@ export default function BlocDetail() {
     enabled: !!bloc?._id,
     refetchInterval: 30000,
   });
-  const recentActivity = recentData.orders;
-  const count24h = recentData.count24h;
+  // Handle both old (array) and new ({ orders, count24h }) response shapes during cache transition
+  const recentActivity = Array.isArray(recentData) ? recentData : (recentData.orders ?? []);
+  const count24h = recentData.count24h ?? 0;
 
   if (isLoading) return <LoadingScreen />;
   if (!bloc) return <p className="p-16 text-center text-muted">Bloc not found.</p>;
