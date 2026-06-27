@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../../lib/api.js";
 import { SOCIAL_ICON_DEFS, SocialIconSvg } from "../../lib/socialIcons.jsx";
 
