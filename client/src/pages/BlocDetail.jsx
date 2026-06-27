@@ -112,20 +112,18 @@ export default function BlocDetail() {
 
   // Shuffle zone: older orders rotating every 5s with fade animation
   const [shuffleList, setShuffleList] = useState([]);
-  const [shuffleFading, setShuffleFading] = useState(false);
+  const [slideKey, setSlideKey] = useState(0);
   useEffect(() => {
     const older = recentData.older ?? [];
     if (older.length > 0) setShuffleList(older);
   }, [recentData.older]);
   useEffect(() => {
     if (shuffleList.length < 2) return;
+    // Bring last item to front every 4s — new top item slides in from above
     const id = setInterval(() => {
-      setShuffleFading(true);
-      setTimeout(() => {
-        setShuffleList((prev) => [...prev.slice(1), prev[0]]);
-        setShuffleFading(false);
-      }, 400);
-    }, 5000);
+      setShuffleList((prev) => [prev[prev.length - 1], ...prev.slice(0, -1)]);
+      setSlideKey((k) => k + 1);
+    }, 4000);
     return () => clearInterval(id);
   }, [shuffleList.length]);
 
@@ -327,9 +325,12 @@ export default function BlocDetail() {
                   <div className="h-px flex-1 bg-line" />
                 </div>
               )}
-              <div className="space-y-2 transition-opacity duration-400" style={{ opacity: shuffleFading ? 0 : 1 }}>
+              <div className="space-y-2 overflow-hidden">
                 {shuffleList.slice(0, 4).map((r, i) => (
-                  <div key={r.phone + i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
+                  <div
+                    key={i === 0 ? `top-${slideKey}` : r.phone + i}
+                    className={`flex items-center gap-2 rounded-lg bg-cream px-3 py-2 ${i === 0 ? "animate-slide-in-top" : ""}`}
+                  >
                     <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
                     <span className="font-mono text-xs text-muted">{r.phone}</span>
