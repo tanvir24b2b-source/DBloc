@@ -105,6 +105,7 @@ export const defaultContent = [
   { key: "bloc.dblocLabel", value: "D-Bloc Price", type: "text", page: "blocdetail", group: "Product Page", label: "D-Bloc Price Label" },
   { key: "bloc.closingLabel", value: "Closing In", type: "text", page: "blocdetail", group: "Product Page", label: "Closing In Label" },
   { key: "bloc.hurryText", value: "Hurry — closes soon!", type: "text", page: "blocdetail", group: "Product Page", label: "Hurry Text" },
+  { key: "bloc.advanceLine", value: "🔒 Pay {advance} now to lock your spot · rest {remaining} on delivery", type: "text", page: "blocdetail", group: "Product Page", label: "Advance Payment Line ({advance} = amount, {remaining} = rest)" },
   { key: "bloc.participationLabel", value: "Current Participation", type: "text", page: "blocdetail", group: "Product Page", label: "Participation Label" },
   { key: "bloc.unlockLabel", value: "Unlock Progress", type: "text", page: "blocdetail", group: "Product Page", label: "Unlock Progress Label" },
   { key: "bloc.capacityLabel", value: "Capacity Status", type: "text", page: "blocdetail", group: "Product Page", label: "Capacity Label" },

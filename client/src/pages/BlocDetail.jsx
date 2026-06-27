@@ -50,6 +50,7 @@ export default function BlocDetail() {
   const { data: allBlocs = [] } = useBlocs();
   const currency = useText("site.currency", "৳");
   const joinLabel = useText("join.detailCta", "JOIN THIS BLOC");
+  const advanceLineTemplate = useText("bloc.advanceLine", "🔒 Pay {advance} now to lock your spot · rest {remaining} on delivery");
 
   const [active, setActive] = useState(0);
   const [qty, setQty] = useState(1);
@@ -282,22 +283,12 @@ export default function BlocDetail() {
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-line">
                 <div
-                  className="bar-shimmer bar-pulse h-full rounded-full bg-brand"
-                  style={{ width: `${Math.max(3, unlockPct)}%` }}
+                  className="bar-shimmer bar-pulse h-full rounded-full bg-brand transition-all duration-1000 ease-out"
+                  style={{ width: `${Math.max(12, unlockPct)}%` }}
                 />
               </div>
             </div>
           </div>
-
-          {/* Advance payment line */}
-          {bloc.advanceAmount > 0 && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/[0.04] px-4 py-3">
-              <span className="text-base">🔒</span>
-              <p className="text-sm font-semibold text-ink">
-                Pay <span className="font-extrabold text-brand">{currency}{formatPrice(bloc.advanceAmount)}</span> now to lock your spot · rest on delivery
-              </p>
-            </div>
-          )}
 
           {/* Join button */}
           <button
@@ -309,11 +300,25 @@ export default function BlocDetail() {
             {bloc.status === "active" ? `${joinLabel} NOW →` : bloc.status === "full" ? "BLOC FULL" : "BLOC EXPIRED"}
           </button>
 
-          {/* Spots + live status row (timer moved to sticky bar only) */}
+          {/* Spots + live status row */}
           <div className="mt-3 flex items-center justify-between rounded-xl border border-line bg-cream px-4 py-2.5 text-[11px]">
-            <span className="flex items-center gap-1 text-success font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Live · {spotsLeft} spots left</span>
+            <span className="flex items-center gap-1 text-success font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              {capacityPct >= 70
+                ? `Live · Only ${spotsLeft} spots left`
+                : `Live · ${joined} people in this Bloc`}
+            </span>
             <span className="animate-hurry font-bold text-brand"><EditableText keyName="bloc.hurryText" fallback="Hurry — closes soon!" /></span>
           </div>
+
+          {/* Advance payment line — below Live row, editable from admin Content */}
+          {bloc.advanceAmount > 0 && (
+            <div className="mt-2 rounded-xl border border-brand/30 bg-brand/[0.04] px-4 py-2.5 text-sm font-semibold text-ink">
+              {advanceLineTemplate
+                .replace("{advance}", `${currency}${formatPrice(bloc.advanceAmount)}`)
+                .replace("{remaining}", `${currency}${formatPrice(Math.max(0, bloc.blocPrice * qty - bloc.advanceAmount))}`)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -355,7 +360,7 @@ export default function BlocDetail() {
                     <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
                     <span className="font-mono text-xs text-muted">{r.phone}</span>
-                    <span className="text-[10px] text-muted">{r.time}</span>
+                    <span className="text-[10px] font-semibold text-success">✓ Verified</span>
                   </div>
                 ))}
               </div>
