@@ -101,16 +101,33 @@ export default function BlocDetail() {
     return list.slice(0, 6);
   }, [bloc]);
 
-  // Real recent orders for this bloc — refreshes every 30s, filtered to last 24h on backend
-  const { data: recentData = { orders: [], count24h: 0 } } = useQuery({
+  const { data: recentData = { orders: [], older: [], count24h: 0 } } = useQuery({
     queryKey: ["bloc-recent", bloc?._id],
     queryFn: () => api.get(`/orders/bloc/${bloc._id}/recent`).then((r) => r.data),
     enabled: !!bloc?._id,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
-  // Handle both old (array) and new ({ orders, count24h }) response shapes during cache transition
   const recentActivity = Array.isArray(recentData) ? recentData : (recentData.orders ?? []);
   const count24h = recentData.count24h ?? 0;
+
+  // Shuffle zone: older orders rotating every 5s with fade animation
+  const [shuffleList, setShuffleList] = useState([]);
+  const [shuffleFading, setShuffleFading] = useState(false);
+  useEffect(() => {
+    const older = recentData.older ?? [];
+    if (older.length > 0) setShuffleList(older);
+  }, [recentData.older]);
+  useEffect(() => {
+    if (shuffleList.length < 2) return;
+    const id = setInterval(() => {
+      setShuffleFading(true);
+      setTimeout(() => {
+        setShuffleList((prev) => [...prev.slice(1), prev[0]]);
+        setShuffleFading(false);
+      }, 400);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [shuffleList.length]);
 
   if (isLoading) return <LoadingScreen />;
   if (!bloc) return <p className="p-16 text-center text-muted">Bloc not found.</p>;
@@ -347,35 +364,60 @@ export default function BlocDetail() {
       {/* ===== Recent Joins + Delivery side by side ===== */}
       <Section className="!p-0 overflow-hidden">
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-line">
-          {/* Left: Recent Joins — only shown if there's activity in last 24h */}
+          {/* Left: Recent Joins — recent zone (24h) + shuffle zone (older) */}
           <div className="p-5">
-            {recentActivity.length > 0 ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-base font-bold text-ink">
-                    <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
-                    <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
-                  </h2>
-                  <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live · last 24h</span>
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+                <span className="h-2 w-2 animate-dot-pulse rounded-full bg-success" />
+                <EditableText keyName="bloc.recentTitle" fallback="Recent Joins" />
+              </h2>
+              <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#15803d]">Live</span>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {/* Recent zone — last 24h, green highlight */}
+              {recentActivity.map((r, i) => (
+                <div key={r.phone + r.time} className="flex items-center gap-2 rounded-lg bg-[#dcfce7] px-3 py-2">
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-success/20 text-xs font-bold text-success">{r.name[0]}</div>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                  <span className="font-mono text-xs text-muted">{r.phone}</span>
+                  <span className="text-[10px] font-semibold text-success">{r.time}</span>
                 </div>
-                <div className="mt-3 space-y-2">
-                  {recentActivity.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
-                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                      <span className="font-mono text-xs text-muted">{r.phone}</span>
-                      <span className="text-[10px] text-muted">{r.time}</span>
-                    </div>
-                  ))}
+              ))}
+
+              {/* Divider — only if both zones have entries */}
+              {recentActivity.length > 0 && shuffleList.length > 0 && (
+                <div className="flex items-center gap-2 py-0.5">
+                  <div className="h-px flex-1 bg-line" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted">earlier</span>
+                  <div className="h-px flex-1 bg-line" />
                 </div>
-              </>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center py-6 text-center">
-                <p className="text-2xl">🚀</p>
-                <p className="mt-2 text-sm font-bold text-ink">Be the first to join!</p>
-                <p className="mt-1 text-xs text-muted">No recent joins yet — grab an early spot.</p>
+              )}
+
+              {/* Shuffle zone — older joins, rotating with fade */}
+              <div
+                className="space-y-2 transition-opacity duration-400"
+                style={{ opacity: shuffleFading ? 0 : 1 }}
+              >
+                {shuffleList.slice(0, 4).map((r, i) => (
+                  <div key={r.phone + i} className="flex items-center gap-2 rounded-lg bg-cream px-3 py-2">
+                    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                    <span className="font-mono text-xs text-muted">{r.phone}</span>
+                    <span className="text-[10px] text-muted">{r.time}</span>
+                  </div>
+                ))}
               </div>
-            )}
+
+              {/* If no orders at all yet */}
+              {recentActivity.length === 0 && shuffleList.length === 0 && (
+                <div className="py-6 text-center">
+                  <p className="text-2xl">🚀</p>
+                  <p className="mt-2 text-sm font-bold text-ink">Be the first to join!</p>
+                  <p className="mt-1 text-xs text-muted">Grab an early spot.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: Estimated Delivery */}

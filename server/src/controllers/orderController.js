@@ -194,11 +194,13 @@ export async function recentBlocOrders(req, res) {
     return res.status(400).json({ message: "Invalid bloc ID" });
   }
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [orders, count24h] = await Promise.all([
+  const [recent, older, count24h] = await Promise.all([
+    // Recent zone: last 24h, newest first, up to 5
     Order.find({ bloc: req.params.blocId, createdAt: { $gte: since24h } })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("customerName mobile createdAt"),
+      .sort({ createdAt: -1 }).limit(5).select("customerName mobile createdAt"),
+    // Shuffle zone: older than 24h, up to 20
+    Order.find({ bloc: req.params.blocId, createdAt: { $lt: since24h } })
+      .sort({ createdAt: -1 }).limit(20).select("customerName mobile createdAt"),
     Order.countDocuments({ bloc: req.params.blocId, createdAt: { $gte: since24h } }),
   ]);
 
@@ -210,15 +212,15 @@ export async function recentBlocOrders(req, res) {
     const m = Math.round((Date.now() - new Date(date)) / 60000);
     if (m < 1) return "just now";
     if (m < 60) return `${m}m ago`;
-    return `${Math.round(m / 60)}h ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.round(h / 24)}d ago`;
   };
+  const fmt = (o) => ({ name: o.customerName || "Someone", phone: mask(o.mobile), time: ago(o.createdAt) });
 
   res.json({
-    orders: orders.map((o) => ({
-      name: o.customerName || "Someone",
-      phone: mask(o.mobile),
-      time: ago(o.createdAt),
-    })),
+    orders: recent.map(fmt),
+    older: older.map(fmt),
     count24h,
   });
 }
