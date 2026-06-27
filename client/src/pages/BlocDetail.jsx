@@ -116,20 +116,25 @@ export default function BlocDetail() {
   const recentActivity = Array.isArray(recentData) ? recentData : (recentData.orders ?? []);
   const count24h = recentData.count24h ?? 0;
 
-  // Shuffle zone: older orders rotating every 5s with fade animation
+  // Shuffle zone: conveyor belt animation — items push down, new entry from top
+  const ITEM_H = 48; // px height of each shuffle item
+  const SHOW = 3;    // visible rows
   const [shuffleList, setShuffleList] = useState([]);
-  const [slideKey, setSlideKey] = useState(0);
+  const [isConveyor, setIsConveyor] = useState(false);
   useEffect(() => {
     const older = recentData.older ?? [];
     if (older.length > 0) setShuffleList(older);
   }, [recentData.older]);
   useEffect(() => {
     if (shuffleList.length < 2) return;
-    // Bring last item to front every 4s — new top item slides in from above
+    const STAY = 1000, DURATION = 600;
     const id = setInterval(() => {
-      setShuffleList((prev) => [prev[prev.length - 1], ...prev.slice(0, -1)]);
-      setSlideKey((k) => k + 1);
-    }, 4000);
+      setIsConveyor(true);
+      setTimeout(() => {
+        setShuffleList((prev) => [prev[prev.length - 1], ...prev.slice(0, -1)]);
+        setIsConveyor(false);
+      }, DURATION);
+    }, STAY + DURATION);
     return () => clearInterval(id);
   }, [shuffleList.length]);
 
@@ -272,22 +277,48 @@ export default function BlocDetail() {
               🎉 You Save {currency}{formatPrice(save)} — That's {discount}% OFF
             </div>
 
-            {/* Animated progress bar */}
-            <div className="mt-4">
-              <div className="mb-1.5 flex items-center justify-between text-xs font-semibold">
-                {unlockPct >= 35
-                  ? <span className="text-ink"><strong className="text-ink">{joined} joined</strong> · {moreNeeded > 0 ? `${moreNeeded} more to unlock` : "✓ Deal unlocked!"}</span>
-                  : <span className="text-ink">Only <strong className="text-brand">{moreNeeded} more</strong> needed to unlock this price</span>
-                }
-                {unlockPct >= 35 && <span className="text-brand">{unlockPct}%</span>}
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-line">
-                <div
-                  className="bar-shimmer bar-pulse h-full rounded-full bg-brand transition-all duration-1000 ease-out"
-                  style={{ width: `${Math.max(12, unlockPct)}%` }}
-                />
-              </div>
-            </div>
+            {/* Animated progress bar with unlock marker */}
+            {(() => {
+              const markerPct = Math.min(95, Math.round((unlockGoal / bloc.maxSpots) * 100));
+              const fillPct = Math.min(100, Math.round((joined / bloc.maxSpots) * 100));
+              const unlocked = joined >= unlockGoal;
+              return (
+                <div className="mt-4">
+                  <div className="mb-1.5 flex items-center justify-between text-xs font-semibold">
+                    {unlocked
+                      ? <span className="text-success font-bold">✓ Deal unlocked!</span>
+                      : unlockPct >= 35
+                        ? <span className="text-ink"><strong>{joined} joined</strong> · {moreNeeded} more to unlock</span>
+                        : <span className="text-ink">Only <strong className="text-brand">{moreNeeded} more</strong> needed to unlock this price</span>
+                    }
+                    <span className={unlocked ? "text-success font-bold" : "text-brand"}>{joined}/{unlockGoal}</span>
+                  </div>
+                  <div className="relative h-2.5 w-full rounded-full bg-line">
+                    {/* Fill */}
+                    <div
+                      className="bar-shimmer bar-pulse absolute left-0 top-0 h-full rounded-full bg-brand transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.max(5, fillPct)}%` }}
+                    />
+                    {/* Unlock marker — vertical dash */}
+                    <div
+                      className="absolute top-[-3px] h-[18px] w-[2.5px] rounded-full transition-colors duration-500"
+                      style={{
+                        left: `${markerPct}%`,
+                        background: unlocked ? "#22c55e" : "#f97316",
+                        boxShadow: unlocked ? "0 0 6px #22c55e" : "0 0 6px #f97316",
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-muted">
+                    <span>{joined} joined</span>
+                    <span style={{ marginLeft: `${markerPct - 6}%` }} className={unlocked ? "font-bold text-success" : "font-bold text-brand"}>
+                      {unlocked ? "✓ Unlocked" : `🔓 ${unlockGoal} to unlock`}
+                    </span>
+                    <span>{bloc.maxSpots} total</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Join button */}
@@ -351,18 +382,26 @@ export default function BlocDetail() {
                   <div className="h-px flex-1 bg-line" />
                 </div>
               )}
-              <div className="space-y-2 overflow-hidden">
-                {shuffleList.slice(0, 4).map((r, i) => (
-                  <div
-                    key={i === 0 ? `top-${slideKey}` : r.phone + i}
-                    className={`flex items-center gap-2 rounded-lg bg-cream px-3 py-2 ${i === 0 ? "animate-slide-in-top" : ""}`}
-                  >
-                    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
-                    <span className="font-mono text-xs text-muted">{r.phone}</span>
-                    <span className="text-[10px] font-semibold text-success">✓ Verified</span>
-                  </div>
-                ))}
+              {/* Conveyor belt: container clips to SHOW items, wrapper shifts down on each tick */}
+              <div style={{ height: ITEM_H * SHOW, overflow: "hidden" }}>
+                <div style={{
+                  transform: `translateY(${isConveyor ? 0 : -ITEM_H}px)`,
+                  transition: isConveyor ? "transform 0.6s ease-in-out" : "none",
+                }}>
+                  {/* Pending item — hidden above until animation */}
+                  {[shuffleList[shuffleList.length - 1], ...shuffleList.slice(0, SHOW)].map((r, i) => (
+                    <div
+                      key={r.phone + i}
+                      style={{ height: ITEM_H }}
+                      className="flex items-center gap-2 rounded-lg bg-cream px-3 py-1.5"
+                    >
+                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{r.name[0]}</div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.name}</span>
+                      <span className="font-mono text-xs text-muted">{r.phone}</span>
+                      <span className="text-[10px] font-semibold text-success">✓ Verified</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               {recentActivity.length === 0 && shuffleList.length === 0 && (
                 <div className="py-6 text-center">

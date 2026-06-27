@@ -146,11 +146,7 @@ body {
 }
 .bar-pulse { animation: bar-pulse 2s ease-in-out infinite; }
 
-@keyframes slide-in-top {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
-}
-.animate-slide-in-top { animation: slide-in-top 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+/* conveyor belt animation handled via inline CSS transition in BlocDetail.jsx */
 
 /* Delivery timeline: orange pulse flowing down the connector toward the next step */
 @keyframes flow-down {
